@@ -2,20 +2,22 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt::Display;
+use std::hash::Hash;
 
 #[derive(Eq, PartialEq)]
-struct Edge {
-    dest: char,
+struct Edge<T> {
+    dest: T,
     w: u8,
 }
 
-impl PartialOrd for Edge {
+impl<T: Eq + Ord> PartialOrd for Edge<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Edge {
+impl<T: Eq + Ord> Ord for Edge<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         // Notice that the we flip the ordering on costs.
         // In case of a tie we compare positions - this step is necessary
@@ -28,23 +30,23 @@ impl Ord for Edge {
 }
 
 fn main() {
-    let edges: HashMap<char, Vec<Edge>> = HashMap::from([
+    let edges: HashMap<char, Vec<Edge<char>>> = HashMap::from([
         (
             'a',
             vec![
                 Edge { dest: 'b', w: 1 },
-                Edge { dest: 'c', w: 1 },
-                Edge { dest: 'e', w: 1 },
+                Edge { dest: 'c', w: 9 },
+                Edge { dest: 'e', w: 9 },
             ],
         ),
         ('b', vec![Edge { dest: 'c', w: 1 }]),
         (
             'c',
-            vec![Edge { dest: 'd', w: 1 }, Edge { dest: 'e', w: 1 }],
+            vec![Edge { dest: 'd', w: 1 }, Edge { dest: 'e', w: 9 }],
         ),
         (
             'd',
-            vec![Edge { dest: 'e', w: 1 }, Edge { dest: 'f', w: 1 }],
+            vec![Edge { dest: 'e', w: 1 }, Edge { dest: 'f', w: 9 }],
         ),
         ('e', vec![Edge { dest: 'f', w: 1 }]),
     ]);
@@ -53,9 +55,9 @@ fn main() {
     println! {"That's the name of the game."}
 }
 
-fn traceback(distances: HashMap<char, (u8, char)>, source: char, dest: char) -> Vec<char> {
-    let mut output: Vec<char> = vec![];
-    let mut current: char = dest;
+fn traceback<T: Eq + Hash + Copy>(distances: HashMap<T, (u8, T)>, source: T, dest: T) -> Vec<T> {
+    let mut output: Vec<T> = vec![];
+    let mut current: T = dest;
     let mut _dist: u8;
     while current != source {
         output.push(current);
@@ -66,16 +68,16 @@ fn traceback(distances: HashMap<char, (u8, char)>, source: char, dest: char) -> 
     return output;
 }
 
-fn dijkstra(
-    edges: HashMap<char, Vec<Edge>>,
-    source: char,
-    goal: char,
-) -> HashMap<char, (u8, char)> {
-    let mut distances: HashMap<char, (u8, char)> = Default::default();
-    let mut queue: BinaryHeap<Edge> = BinaryHeap::new();
-    let mut visited: HashSet<char> = Default::default();
+fn dijkstra<T: Eq + Ord + Hash + Display + Copy>(
+    edges: HashMap<T, Vec<Edge<T>>>,
+    source: T,
+    goal: T,
+) -> HashMap<T, (u8, T)> {
+    let mut distances: HashMap<T, (u8, T)> = Default::default();
+    let mut queue: BinaryHeap<Edge<T>> = BinaryHeap::new();
+    let mut visited: HashSet<T> = Default::default();
 
-    let mut current: Edge;
+    let mut current: Edge<T>;
     queue.push(Edge { dest: source, w: 0 });
     while !queue.is_empty() {
         current = queue.pop().unwrap();
