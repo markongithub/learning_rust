@@ -50,9 +50,8 @@ fn main() {
         ),
         ('e', vec![Edge { dest: 'f', w: 1 }]),
     ]);
-    let output = dijkstra(edges, 'a', 'f');
+    let output = dijkstra(edges, 'a', |x| x == 'f');
     println!("{0:?}", traceback(output, 'a', 'f'));
-    println! {"That's the name of the game."}
 }
 
 fn traceback<T: Eq + Hash + Copy>(distances: HashMap<T, (u8, T)>, source: T, dest: T) -> Vec<T> {
@@ -71,7 +70,7 @@ fn traceback<T: Eq + Hash + Copy>(distances: HashMap<T, (u8, T)>, source: T, des
 fn dijkstra<T: Eq + Ord + Hash + Display + Copy>(
     edges: HashMap<T, Vec<Edge<T>>>,
     source: T,
-    goal: T,
+    is_goal: fn(T) -> bool,
 ) -> HashMap<T, (u8, T)> {
     let mut distances: HashMap<T, (u8, T)> = Default::default();
     let mut queue: BinaryHeap<Edge<T>> = BinaryHeap::new();
@@ -81,7 +80,7 @@ fn dijkstra<T: Eq + Ord + Hash + Display + Copy>(
     queue.push(Edge { dest: source, w: 0 });
     while !queue.is_empty() {
         current = queue.pop().unwrap();
-        if current.dest == goal {
+        if is_goal(current.dest) {
             break;
         }
         visited.insert(current.dest);
