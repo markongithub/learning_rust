@@ -50,7 +50,7 @@ fn main() {
         ),
         ('e', vec![Edge { dest: 'f', w: 1 }]),
     ]);
-    let output = dijkstra(edges, 'a', |x| x == 'f');
+    let (_, output) = dijkstra(edges, 'a', |x| x == 'f');
     println!("{0:?}", traceback(output, 'a', 'f'));
 }
 
@@ -71,16 +71,18 @@ fn dijkstra<T: Eq + Ord + Hash + Display + Copy>(
     edges: HashMap<T, Vec<Edge<T>>>,
     source: T,
     is_goal: fn(T) -> bool,
-) -> HashMap<T, (u8, T)> {
+) -> (Option<T>, HashMap<T, (u8, T)>) {
     let mut distances: HashMap<T, (u8, T)> = Default::default();
     let mut queue: BinaryHeap<Edge<T>> = BinaryHeap::new();
     let mut visited: HashSet<T> = Default::default();
 
     let mut current: Edge<T>;
+    let mut found_target: Option<T> = None;
     queue.push(Edge { dest: source, w: 0 });
     while !queue.is_empty() {
         current = queue.pop().unwrap();
         if is_goal(current.dest) {
+            found_target = Some(current.dest);
             break;
         }
         visited.insert(current.dest);
@@ -112,5 +114,5 @@ fn dijkstra<T: Eq + Ord + Hash + Display + Copy>(
             }
         }
     }
-    return distances;
+    return (found_target, distances);
 }
