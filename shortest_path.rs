@@ -64,7 +64,7 @@ fn traceback<T: Eq + Hash + Copy>(distances: HashMap<T, (u8, T)>, source: T, des
     }
     output.push(source);
     output.reverse();
-    return output;
+    output
 }
 
 fn dijkstra<T: Eq + Ord + Hash + Display + Copy>(
@@ -114,5 +114,5 @@ fn dijkstra<T: Eq + Ord + Hash + Display + Copy>(
             }
         }
     }
-    return (found_target, distances);
+    (found_target, distances)
 }
