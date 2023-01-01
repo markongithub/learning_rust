@@ -10,8 +10,14 @@ struct AVLNode<T: Eq + Ord> {
 
 fn insert<T: Ord>(tree: &mut AVLTree<T>, new_label: T) {
     match &tree.as_ref() {
-        Some(t) => println!("Inserting into a Some"),
-        None => println!("Inserting into a None"),
+        Some(node) => {
+            println!("Inserting into a Some");
+            //insert(&mut node.left, new_label);
+        }
+        None => {
+            println!("Inserting into a None");
+            *tree = singleton(new_label);
+        }
     }
     //    println!("lol");
 }
@@ -54,4 +60,5 @@ fn main() {
     println!("why is this necessary");
     let mut my_tree: AVLTree<char> = None;
     insert(&mut my_tree, 'a');
+    insert(&mut my_tree, 'b');
 }
