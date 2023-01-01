@@ -104,8 +104,17 @@ fn insert_different(not_self: &mut AnotherNode, new_val: u32) {
     }
 }
 
-fn insert_into_option(tree: &mut Option<Box<AnotherNode>>) {
+fn insert_into_option_left(tree: &mut Option<Box<AnotherNode>>) {
     println!("here we go");
+    let option_amp_mut: Option<&mut Box<AnotherNode>> = tree.as_mut();
+    if option_amp_mut.is_some() {
+        println!("option_amp_mut is Some.");
+        let mut_box: &mut Box<AnotherNode> = option_amp_mut.unwrap();
+        let left_child: &mut Option<Box<AnotherNode>> = &mut mut_box.l;
+        insert_into_option_left(left_child);
+    } else {
+        println!("option_amp_mut is None.")
+    }
 }
 
 fn main() {
