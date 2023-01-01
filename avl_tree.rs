@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 type AVLTree<T> = Option<Box<AVLNode<T>>>;
 
 // #[derive(Eq, PartialEq)]
@@ -36,7 +38,26 @@ fn singleton<T: Ord>(new_label: T) -> AVLTree<T> {
         right: None,
     };
     Some(Box::new(new_node))
-    //    panic!("I didn't implement this.");
+}
+
+fn contains<T: Eq + Ord + Debug>(tree: &AVLTree<T>, target: T) -> bool {
+    let option_amp_box: Option<&Box<AVLNode<T>>> = tree.as_ref();
+    if option_amp_box.is_some() {
+        let amp_box: &Box<AVLNode<T>> = option_amp_box.unwrap();
+        let this_label: &T = &amp_box.label;
+        println!("Checking for {0:?} on node {1:?}", target, this_label);
+        if target == *this_label {
+            return true;
+        }
+        let child: &AVLTree<T> = if target < *this_label {
+            &amp_box.left
+        } else {
+            &amp_box.right
+        };
+        return contains(child, target);
+    } else {
+        return false;
+    }
 }
 
 fn main() {
@@ -46,4 +67,6 @@ fn main() {
     insert_into_option(&mut my_tree, 'b');
     insert_into_option(&mut my_tree, 'c');
     insert_into_option(&mut my_tree, 'd');
+    println!("Does the tree contain c? {0}", contains(&my_tree, 'c'));
+    println!("Does the tree contain z? {0}", contains(&my_tree, 'z'));
 }
