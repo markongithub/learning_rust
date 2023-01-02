@@ -1,5 +1,7 @@
 use std::cmp::max;
 use std::fmt::Debug;
+use std::mem::replace;
+use std::mem::swap;
 
 type AVLTree<T> = Option<Box<AVLNode<T>>>;
 
@@ -99,25 +101,52 @@ node *rotate_Left(node *X, node *Z) {
     }
     return Z; // return new root of rotated subtree
 }
+
+For a right rotation:
+the new root will be the old left child
+the old root will be the new right child
+the new root's left child doesn't change at all
+the old root's right child doesn't change at all
+the new root's old right child will be the old root's new left child
+
+old root D
+new root B
+B's left child A does not change
+D's right child E does not change
+B's right child C becomes the new left child of D
+
+root pointer changes from D to B
+D.left changes from B to C
+B.right changes from C to D
+
 */
 
-/*
-fn rotate_left<T: Ord>(tree: &mut AVLTree<T>) {
-    let option_amp_mut: Option<&mut Box<AVLNode<T>>> = tree.as_mut();
-    if option_amp_mut.is_none() {
+fn rotate_left<T: Ord>(old_root_x: &mut AVLTree<T>) {
+    if old_root_x.as_mut().is_none() {
         return;
     }
-    let old_root_x: &mut Box<AVLNode<T>> = option_amp_mut.unwrap();
-    let new_root_z: &mut Box<AVLNode<T>> = &mut old_root_x.right.unwrap();
-    old_root_x.right = new_root_z.left;
-    new_root_z.left = *tree;
-    let immutable_z: &Box<AVLNode<T>> = &new_root_z;
-    *tree = Some(*immutable_z);
-    // mut_box.right will be the new root;
-    // mut_box will keep its old left child.
-    // mut_box's new right child will be the former left_child of mut_box.right
+    if old_root_x.as_mut().unwrap().right.as_mut().is_none() {
+        panic!("This is too weird");
+    }
+    let orphan_t23: &mut AVLTree<T> = &mut old_root_x
+        .as_mut()
+        .unwrap()
+        .right
+        .as_mut()
+        .unwrap()
+        .left
+        .take();
+    let orphan_z: &mut AVLTree<T> = &mut old_root_x.as_mut().unwrap().right.take();
+    old_root_x.as_mut().unwrap().right = orphan_t23.take();
+    orphan_z.as_mut().unwrap().left = old_root_x.take();
+    *old_root_x = orphan_z.take();
+    //    *tree = new_root_z;
+    // at first tree -> X and X.right -> Z and Z.left -> t23
+    // swap tree and Z.left
+    // now tree -> t23 and X.right -> Z and Z.left -> X
+    // swap tree and X.right
+    // now tree -> Z and X.right -> t23 and Z.left -> X
 }
-*/
 
 fn main() {
     println!("why is this necessary");
