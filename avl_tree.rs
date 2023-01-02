@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::fmt::Debug;
 
 type AVLTree<T> = Option<Box<AVLNode<T>>>;
@@ -5,12 +6,26 @@ type AVLTree<T> = Option<Box<AVLNode<T>>>;
 // #[derive(Eq, PartialEq)]
 struct AVLNode<T: Eq + Ord> {
     label: T,
-    height: u8,
+    height: i64,
     left: AVLTree<T>,
     right: AVLTree<T>,
 }
 
-fn insert_into_option<T: Ord>(tree: &mut AVLTree<T>, new_label: T) {
+fn get_height<T: Ord>(tree: &AVLTree<T>) -> i64 {
+    match tree {
+        &Some(ref node) => node.height,
+        &None => 0,
+    }
+}
+
+fn balance_factor<T: Ord>(tree: &AVLTree<T>) -> i64 {
+    match tree {
+        &Some(ref node) => get_height(&node.right) - get_height(&node.left),
+        &None => 0,
+    }
+}
+
+fn insert<T: Ord>(tree: &mut AVLTree<T>, new_label: T) {
     println!("here we go");
     let option_amp_mut: Option<&mut Box<AVLNode<T>>> = tree.as_mut();
     if option_amp_mut.is_some() {
@@ -19,10 +34,13 @@ fn insert_into_option<T: Ord>(tree: &mut AVLTree<T>, new_label: T) {
         let this_label: &T = &mut_box.label;
         let child: &mut AVLTree<T> = if new_label < *this_label {
             &mut mut_box.left
-        } else {
+        } else if new_label > *this_label {
             &mut mut_box.right
+        } else {
+            panic!("What if we insert the same key twice?")
         };
-        insert_into_option(child, new_label);
+        insert(child, new_label);
+        mut_box.height = max(get_height(&mut_box.left), get_height(&mut_box.right)) + 1;
     } else {
         println!("option_amp_mut is None.");
         let new_tree: AVLTree<T> = singleton(new_label);
@@ -60,13 +78,55 @@ fn contains<T: Eq + Ord + Debug>(tree: &AVLTree<T>, target: T) -> bool {
     }
 }
 
+/*
+node *rotate_Left(node *X, node *Z) {
+    // Z is by 2 higher than its sibling
+    t23 = left_child(Z); // Inner child of Z
+    right_child(X) = t23;
+    if (t23 != null)
+        parent(t23) = X;
+    left_child(Z) = X;
+    parent(X) = Z;
+    // 1st case, BF(Z) == 0,
+    //   only happens with deletion, not insertion:
+    if (BF(Z) == 0) { // t23 has been of same height as t4
+        BF(X) = +1;   // t23 now higher
+        BF(Z) = –1;   // t4 now lower than X
+    } else
+    { // 2nd case happens with insertion or deletion:
+        BF(X) = 0;
+        BF(Z) = 0;
+    }
+    return Z; // return new root of rotated subtree
+}
+*/
+
+/*
+fn rotate_left<T: Ord>(tree: &mut AVLTree<T>) {
+    let option_amp_mut: Option<&mut Box<AVLNode<T>>> = tree.as_mut();
+    if option_amp_mut.is_none() {
+        return;
+    }
+    let old_root_x: &mut Box<AVLNode<T>> = option_amp_mut.unwrap();
+    let new_root_z: &mut Box<AVLNode<T>> = &mut old_root_x.right.unwrap();
+    old_root_x.right = new_root_z.left;
+    new_root_z.left = *tree;
+    let immutable_z: &Box<AVLNode<T>> = &new_root_z;
+    *tree = Some(*immutable_z);
+    // mut_box.right will be the new root;
+    // mut_box will keep its old left child.
+    // mut_box's new right child will be the former left_child of mut_box.right
+}
+*/
+
 fn main() {
     println!("why is this necessary");
     let mut my_tree: AVLTree<char> = None;
-    insert_into_option(&mut my_tree, 'a');
-    insert_into_option(&mut my_tree, 'b');
-    insert_into_option(&mut my_tree, 'c');
-    insert_into_option(&mut my_tree, 'd');
+    insert(&mut my_tree, 'a');
+    insert(&mut my_tree, 'b');
+    insert(&mut my_tree, 'c');
+    insert(&mut my_tree, 'd');
+    println!("The tree is now of height {0},", get_height(&my_tree));
     println!("Does the tree contain c? {0}", contains(&my_tree, 'c'));
     println!("Does the tree contain z? {0}", contains(&my_tree, 'z'));
 }
