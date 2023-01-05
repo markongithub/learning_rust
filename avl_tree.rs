@@ -1,5 +1,6 @@
 use std::cmp::max;
 use std::fmt::Debug;
+use std::mem::swap;
 
 type AVLTree<T> = Option<Box<AVLNode<T>>>;
 
@@ -217,6 +218,22 @@ fn fix_height<T: Ord + Debug>(tree: &mut AVLTree<T>) {
         let new_height = 1 + max(left_height, right_height);
         mut_box.height = new_height;
     }
+}
+
+fn find_min_and_delete<T: Ord + Debug>(tree: &mut AVLTree<T>) -> T {
+    if tree.as_ref().is_none() {
+        panic!("Don't call find_min_and_delete on an empty tree.");
+    }
+    let node = tree.as_mut().unwrap();
+    if node.left.as_ref().is_some() {
+        return find_min_and_delete(&mut node.left);
+    }
+    // we are at the minimum node. we promote our right child (empty or
+    // not) and return the label.
+    let right_child = node.right.take();
+    let this_one = tree.take();
+    *tree = right_child;
+    return this_one.unwrap().label;
 }
 
 fn main() {
