@@ -1,6 +1,5 @@
 use std::cmp::max;
 use std::fmt::Debug;
-use std::mem::swap;
 
 type AVLTree<T> = Option<Box<AVLNode<T>>>;
 
@@ -27,6 +26,7 @@ fn balance_factor<T: Ord + Debug>(tree: &AVLTree<T>) -> i64 {
 }
 
 fn rebalance<T: Ord + Debug>(tree: &mut AVLTree<T>) {
+    fix_height(tree); // we could be balanced but still wrong
     let bf = balance_factor(tree);
     match bf {
         -1 | 0 | 1 => (),
@@ -226,18 +226,52 @@ fn find_min_and_delete<T: Ord + Debug>(tree: &mut AVLTree<T>) -> T {
     }
     let node = tree.as_mut().unwrap();
     if node.left.as_ref().is_some() {
-        return find_min_and_delete(&mut node.left);
+        let to_return = find_min_and_delete(&mut node.left);
+        rebalance(tree);
+        return to_return;
     }
     // we are at the minimum node. we promote our right child (empty or
     // not) and return the label.
     let right_child = node.right.take();
     let this_one = tree.take();
     *tree = right_child;
+    // I think our height is correct here? We have the height of the right
+    // child. If it was right before it's right now. If it was balanced before
+    // it's balanced now.
     return this_one.unwrap().label;
 }
 
+fn delete<T: Ord + Debug>(tree: &mut AVLTree<T>, target: T) {
+    if tree.as_ref().is_none() {
+        panic!("Don't delete a label I don't contain.");
+    }
+    let node = tree.as_mut().unwrap();
+    let this_label: &T = &node.label;
+
+    if target < *this_label {
+        delete(&mut node.left, target);
+    } else if target > *this_label {
+        delete(&mut node.right, target);
+    } else {
+        // This is the node we want to delete. If either node is empty, we promote
+        // the other one, empty or not.
+        if node.left.as_ref().is_none() {
+            *tree = node.right.take();
+        } else if node.right.as_ref().is_none() {
+            *tree = node.left.take();
+        } else {
+            // If they are both non-empty, we get the
+            // minimum label from the right child.
+            let new_label = find_min_and_delete(&mut node.right);
+            node.label = new_label;
+        }
+    }
+    fix_height(tree);
+    rebalance(tree);
+}
+
 fn main() {
-    println!("why is this necessary");
+    /*
     let mut my_tree: AVLTree<char> = None;
     insert(&mut my_tree, 'a');
     insert(&mut my_tree, 'b');
@@ -261,4 +295,20 @@ fn main() {
     );
     println!("All elements in order: {0:?}", in_order(&my_tree));
     println!("Can I Debug the tree? {0:?}", my_tree.as_ref().unwrap());
+    delete(&mut my_tree, 'c');
+    println!(
+        "And after deleting c, the debug is {0:?}",
+        my_tree.as_ref().unwrap()
+    );
+    */
+    let mut int_tree: AVLTree<i64> = singleton(1);
+    for n in 2..100 {
+        println!("Now inserting {0}", n);
+        insert(&mut int_tree, n);
+    }
+    for n in 1..100 {
+        println!("Now deleting {0}", n);
+        delete(&mut int_tree, n);
+    }
+    println!("Can I Debug the tree? {0:?}", int_tree.as_ref().unwrap());
 }
