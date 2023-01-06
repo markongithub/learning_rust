@@ -310,5 +310,5 @@ fn main() {
         println!("Now deleting {0}", n);
         delete(&mut int_tree, n);
     }
-    println!("Can I Debug the tree? {0:?}", int_tree.as_ref().unwrap());
+    println!("Can I Debug the tree? {0:?}", int_tree);
 }
