@@ -71,10 +71,10 @@ fn main() {
 10000",
     );
 
-    let mut elves = parse_multiline_string(&test_input); //file("../data/input01.txt");
+    let mut elves = parse_multiline_string(&test_input);
     println!("Part 1 test solution: {}", max_weight_of_one_elf(&elves));
     println!("Part 2 test solution: {}", solve_part_2(&elves));
-    elves = parse_file("../data/input01.txt");
+    elves = parse_file("./data/input01.txt");
     println!("Part 1 solution: {}", max_weight_of_one_elf(&elves));
     println!("Part 2 solution: {}", solve_part_2(&elves));
 }
