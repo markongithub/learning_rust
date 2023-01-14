@@ -74,6 +74,27 @@ fn singleton<T: Ord + Debug>(new_label: T) -> AVLTree<T> {
     Some(Box::new(new_node))
 }
 
+fn validate<T: Ord + Debug>(tree: &AVLTree<T>) -> i64 {
+    if tree.as_ref().is_none() {
+        return 0;
+    }
+    let node = tree.as_ref().unwrap();
+    let left_height = validate(&node.left);
+    let right_height = validate(&node.right);
+    let _bf_ok = match left_height - right_height {
+        -1 | 0 | 1 => true,
+        x => panic!("Bad balance factor: {0:?}", x),
+    };
+    let correct_height = 1 + max(left_height, right_height);
+    if correct_height != node.height {
+        panic!(
+            "My height should say {} but instead it says {}",
+            correct_height, &node.height
+        );
+    }
+    correct_height
+}
+
 fn contains<T: Eq + Ord + Debug>(tree: &AVLTree<T>, target: T) -> bool {
     let option_amp_box: Option<&Box<AVLNode<T>>> = tree.as_ref();
     if option_amp_box.is_some() {
@@ -305,10 +326,12 @@ fn main() {
     for n in 2..100 {
         println!("Now inserting {0}", n);
         insert(&mut int_tree, n);
+        let _whatevz = validate(&int_tree);
     }
     for n in 1..100 {
         println!("Now deleting {0}", n);
         delete(&mut int_tree, n);
+        let _whatevz = validate(&int_tree);
     }
     println!("Can I Debug the tree? {0:?}", int_tree);
 }
