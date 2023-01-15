@@ -74,15 +74,15 @@ fn move_one_crate(stacks: &mut Vec<Vec<char>>, from: usize, to: usize) {
     stacks[to - 1].push(value_to_move);
 }
 
-fn run_instruction(stacks: &mut Vec<Vec<char>>, instruction: &Instruction) {
+fn run_instruction1(stacks: &mut Vec<Vec<char>>, instruction: &Instruction) {
     for _i in 1..=instruction.quantity {
         move_one_crate(stacks, instruction.from, instruction.to);
     }
 }
 
-fn run_instructions(stacks: &mut Vec<Vec<char>>, instructions: &Vec<Instruction>) {
+fn run_instructions1(stacks: &mut Vec<Vec<char>>, instructions: &Vec<Instruction>) {
     for instruction in instructions.iter() {
-        run_instruction(stacks, instruction);
+        run_instruction1(stacks, instruction);
     }
 }
 
@@ -92,7 +92,29 @@ fn top_of_each_stack(stacks: &Vec<Vec<char>>) -> Vec<char> {
 
 fn solve_part_1(input: &str) -> String {
     let (mut stacks, instructions) = parse_input(input);
-    run_instructions(&mut stacks, &instructions);
+    run_instructions1(&mut stacks, &instructions);
+    top_of_each_stack(&stacks).iter().collect()
+}
+
+fn run_instruction2(stacks: &mut Vec<Vec<char>>, instruction: &Instruction) {
+    let mut temp_vec: Vec<char> = vec![];
+    for _i in 1..=instruction.quantity {
+        temp_vec.push(stacks[instruction.from - 1].pop().unwrap());
+    }
+    while !temp_vec.is_empty() {
+        stacks[instruction.to - 1].push(temp_vec.pop().unwrap());
+    }
+}
+
+fn run_instructions2(stacks: &mut Vec<Vec<char>>, instructions: &Vec<Instruction>) {
+    for instruction in instructions.iter() {
+        run_instruction2(stacks, instruction);
+    }
+}
+
+fn solve_part_2(input: &str) -> String {
+    let (mut stacks, instructions) = parse_input(input);
+    run_instructions2(&mut stacks, &instructions);
     top_of_each_stack(&stacks).iter().collect()
 }
 
@@ -107,8 +129,8 @@ move 3 from 1 to 3
 move 2 from 2 to 1
 move 1 from 1 to 2";
     println!("Part 1 test: {:?}", solve_part_1(test_input));
-    println!(
-        "Part 1 solution: {:?}",
-        solve_part_1(&read_to_string("data/input05.txt").unwrap())
-    );
+    let real_input = read_to_string("data/input05.txt").unwrap();
+    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
+    println!("Part 2 test: {:?}", solve_part_2(test_input));
+    println!("Part 2 solution: {:?}", solve_part_2(&real_input));
 }
