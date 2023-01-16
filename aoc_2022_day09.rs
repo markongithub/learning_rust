@@ -17,8 +17,6 @@ struct Coords {
 struct RopeState {
     knots: Vec<Coords>,
     visited: HashSet<Coords>,
-    time: usize,
-    max_knots: usize,
 }
 
 fn parse_motion(line: &str) -> Motion {
@@ -89,8 +87,6 @@ fn move_one_step(old: RopeState, direction: char) -> RopeState {
     let output = RopeState {
         knots: new_knots,
         visited: visited,
-        time: old.time + 1,
-        max_knots: old.max_knots,
     };
     // println!("{:?}", output);
     output
@@ -105,8 +101,6 @@ fn run_motion(old: RopeState, motion: &Motion) -> RopeState {
     let mut output = RopeState {
         knots: old.knots,
         visited: old.visited,
-        time: old.time,
-        max_knots: old.max_knots,
     };
     for _i in 1..=motion.steps {
         output = move_one_step(output, motion.direction);
@@ -125,8 +119,6 @@ fn run_motions(motions: Vec<Motion>, max_knots: usize) -> RopeState {
     let mut next_state = RopeState {
         knots: initial_knots,
         visited: initial_visited,
-        time: 1,
-        max_knots: max_knots,
     };
     for motion in motions.iter() {
         next_state = run_motion(next_state, motion);
