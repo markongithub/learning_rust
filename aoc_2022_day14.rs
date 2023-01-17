@@ -74,31 +74,44 @@ fn parse_input(input: &str) -> SandMap {
     }
 }
 
+fn is_obstructed(state: &SandMap, coords: &Coords) -> bool {
+    coords.y == state.max_y + 2 || state.rocks.contains(coords)
+}
+
 fn drop_sand(state: &mut SandMap) -> bool {
     // returns true IF IT CAME TO REST
     let mut position: Coords = Coords { x: 500, y: 0 };
     while position.y < state.max_y {
         let new_y = position.y + 1;
-        if !state.rocks.contains(&Coords {
-            x: position.x,
-            y: new_y,
-        }) {
+        if !is_obstructed(
+            &state,
+            &Coords {
+                x: position.x,
+                y: new_y,
+            },
+        ) {
             position = Coords {
                 x: position.x,
                 y: new_y,
             };
-        } else if !state.rocks.contains(&Coords {
-            x: position.x - 1,
-            y: new_y,
-        }) {
+        } else if !is_obstructed(
+            &state,
+            &Coords {
+                x: position.x - 1,
+                y: new_y,
+            },
+        ) {
             position = Coords {
                 x: position.x - 1,
                 y: new_y,
             };
-        } else if !state.rocks.contains(&Coords {
-            x: position.x + 1,
-            y: new_y,
-        }) {
+        } else if !is_obstructed(
+            &state,
+            &Coords {
+                x: position.x + 1,
+                y: new_y,
+            },
+        ) {
             position = Coords {
                 x: position.x + 1,
                 y: new_y,
@@ -120,6 +133,7 @@ fn solve_part_1(input: &str) -> usize {
     }
     grains_at_rest
 }
+
 fn main() {
     let test_input = "498,4 -> 498,6 -> 496,6
 503,4 -> 502,4 -> 502,9 -> 494,9";
