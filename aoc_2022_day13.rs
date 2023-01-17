@@ -135,6 +135,34 @@ fn solve_part_1(input: &str) -> usize {
     }
     sum_of_good_indices
 }
+
+fn solve_part_2(input: &str) -> usize {
+    let mut main_vec: Vec<Packet> = vec![];
+    for line in input.lines() {
+        if !line.is_empty() {
+            main_vec.push(parse_packet(line));
+        }
+    }
+    main_vec.push(parse_packet("[[2]]"));
+    main_vec.push(parse_packet("[[6]]"));
+    main_vec.sort();
+    let parsed_two = parse_packet("[[2]]");
+    let parsed_six = parse_packet("[[6]]");
+    let mut found_two = false;
+    let mut index_of_two = 9999;
+    let mut current_index = 0;
+    for packet in main_vec.iter() {
+        current_index += 1;
+        if !found_two && *packet == parsed_two {
+            found_two = true;
+            index_of_two = current_index;
+        } else if found_two && *packet == parsed_six {
+            return current_index * index_of_two;
+        }
+    }
+    panic!("I got through the vector and I didn't find the dividers.");
+}
+
 fn main() {
     let test_input = "[1,1,3,1,1]
 [1,1,5,1,1]
@@ -161,5 +189,7 @@ fn main() {
 [1,[2,[3,[4,[5,6,0]]]],8,9]";
     println!("Part 1 test: {}", solve_part_1(test_input));
     let real_input = read_to_string("data/input13.txt").unwrap();
-    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
+    println!("Part 1 solution: {}", solve_part_1(&real_input));
+    println!("Part 2 test: {}", solve_part_2(test_input));
+    println!("Part 2 solution: {}", solve_part_2(&real_input));
 }
