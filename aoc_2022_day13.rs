@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::fs::read_to_string;
 
 #[derive(Debug, Eq, PartialEq)]
 enum Packet {
@@ -35,7 +36,7 @@ fn parse_packet(input: &str) -> Packet {
         } else if next_char == ']' {
             if !current_digits.is_empty() {
                 let number_str: String = current_digits.into_iter().collect();
-                println!("I got the number {} before a comma", number_str);
+                // println!("I got the number {} before a comma", number_str);
                 let number_value = number_str.parse::<usize>().unwrap();
                 current_digits = vec![];
                 current_vec.push(Packet::ValueP(number_value));
@@ -59,27 +60,106 @@ impl PartialOrd for Packet {
 
 impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
+        //        println!("Comparing packets of {:?} and {:?}", self, other);
         match (&self, &other) {
             (Packet::ValueP(n1), Packet::ValueP(n2)) => n1.cmp(&n2),
             (Packet::ListP(v1), Packet::ListP(v2)) => {
-                if v1.is_empty() && v2.is_empty() {
-                    Ordering::Equal
-                } else if v1.is_empty() {
-                    Ordering::Less
-                } else if v2.is_empty() {
-                    Ordering::Greater
-                } else {
-                    // both vectors are unempty!
-                    let _head1 = &v1[0];
-                    let _head2 = &v2[0];
-                    todo!("lol");
+                let mut v1_iter = v1.iter();
+                let mut v2_iter = v2.iter();
+                loop {
+                    let v1_next = v1_iter.next();
+                    let v2_next = v2_iter.next();
+                    if v1_next.is_none() && v2_next.is_none() {
+                        //                        println!("Two lists ended at the same time, how do we break out of this?");
+                        return Ordering::Equal;
+                    } else if v1_next.is_none() {
+                        return Ordering::Less;
+                    } else if v2_next.is_none() {
+                        return Ordering::Greater;
+                    } else {
+                        // both vectors are unempty!
+                        let head1 = v1_next.unwrap();
+                        let head2 = v2_next.unwrap();
+                        //                        println!("Comparing heads of {:?} and {:?}", head1, head2);
+                        let head_cmp = head1.cmp(head2);
+                        if head_cmp != Ordering::Equal {
+                            //                            println!("That was easy, we have a verdict.");
+                            return head_cmp;
+                        }
+                        //                       println!("The heads were equal, we will have to keep looping.");
+                    }
                 }
             }
-            (_foo, _bar) => todo!("lol"),
+            (Packet::ValueP(n1), other_list) => {
+                let mut new_vec: Vec<Packet> = vec![];
+                new_vec.push(Packet::ValueP(*n1));
+                Packet::ListP(new_vec).cmp(other_list)
+            }
+            (other_list, Packet::ValueP(n2)) => {
+                let mut new_vec: Vec<Packet> = vec![];
+                new_vec.push(Packet::ValueP(*n2));
+                other_list.cmp(&&Packet::ListP(new_vec))
+            }
         }
     }
 }
+
+fn solve_part_1(input: &str) -> usize {
+    let mut first_line: &str = "pointless default value";
+    let mut got_first_line: bool = false;
+    let mut pair_index = 0;
+    let mut sum_of_good_indices = 0;
+    for line in input.lines() {
+        if line.is_empty() {
+            continue;
+        } else if !got_first_line {
+            pair_index += 1;
+            first_line = line;
+            got_first_line = true;
+        } else {
+            let packet1 = parse_packet(first_line);
+            let packet2 = parse_packet(line);
+            got_first_line = false;
+            if packet1 < packet2 {
+                //                println!("{} was correctly before {}", first_line, line);
+                sum_of_good_indices += pair_index;
+            } else if packet1 > packet2 {
+                //              println!("{} should NOT have been before {}", first_line, line);
+            } else {
+                panic!(
+                    "Oh god they are equal or I fucked up the ordering: {} and {}",
+                    first_line, line
+                );
+            }
+        }
+    }
+    sum_of_good_indices
+}
 fn main() {
-    println!("{:?}", parse_packet("[[1],[123,3,4]]"));
-    println!("{:?}", parse_packet("[[4,4],4,4]"));
+    let test_input = "[1,1,3,1,1]
+[1,1,5,1,1]
+
+[[1],[2,3,4]]
+[[1],4]
+
+[9]
+[[8,7,6]]
+
+[[4,4],4,4]
+[[4,4],4,4,4]
+
+[7,7,7,7]
+[7,7,7]
+
+[]
+[3]
+
+[[[]]]
+[[]]
+
+[1,[2,[3,[4,[5,6,7]]]],8,9]
+[1,[2,[3,[4,[5,6,0]]]],8,9]";
+    println!("Part 1 test: {}", solve_part_1(test_input));
+    let real_input = read_to_string("data/input13.txt").unwrap();
+    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
 }
