@@ -78,10 +78,15 @@ fn is_obstructed(state: &SandMap, coords: &Coords) -> bool {
     coords.y == state.max_y + 2 || state.rocks.contains(coords)
 }
 
-fn drop_sand(state: &mut SandMap) -> bool {
+fn drop_sand(state: &mut SandMap, is_part_2: bool) -> bool {
     // returns true IF IT CAME TO REST
     let mut position: Coords = Coords { x: 500, y: 0 };
-    while position.y < state.max_y {
+    let actual_max = if is_part_2 {
+        state.max_y + 2
+    } else {
+        state.max_y
+    };
+    while position.y < actual_max {
         let new_y = position.y + 1;
         if !is_obstructed(
             &state,
@@ -118,20 +123,32 @@ fn drop_sand(state: &mut SandMap) -> bool {
             };
         } else {
             // we have come to rest at position.
+            //            println!("The grain of sand came to rest at {:?}", position);
             state.rocks.insert(position);
             return true;
         }
     }
+    //    println!("The grain of sand fell off.");
     false
 }
 
 fn solve_part_1(input: &str) -> usize {
     let mut sand_map = parse_input(input);
     let mut grains_at_rest = 0;
-    while drop_sand(&mut sand_map) {
+    while drop_sand(&mut sand_map, false) {
         grains_at_rest += 1;
     }
     grains_at_rest
+}
+
+fn solve_part_2(input: &str) -> usize {
+    let mut sand_map = parse_input(input);
+    let mut grains_dropped = 0;
+    while !is_obstructed(&sand_map, &Coords { x: 500, y: 0 }) {
+        let _ignored = drop_sand(&mut sand_map, true);
+        grains_dropped += 1;
+    }
+    grains_dropped
 }
 
 fn main() {
@@ -140,4 +157,6 @@ fn main() {
     println!("Part 1 test: {}", solve_part_1(test_input));
     let real_input = read_to_string("data/input14.txt").unwrap();
     println!("Part 1 solution: {}", solve_part_1(&real_input));
+    println!("Part 2 test: {}", solve_part_2(test_input));
+    println!("Part 2 solution: {}", solve_part_2(&real_input));
 }
