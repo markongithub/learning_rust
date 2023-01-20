@@ -198,21 +198,47 @@ fn try_permutations2(
     time_left: [usize; 2],
     total_flow: usize,
     current_position: [Label; 2],
+    mut best_total_flow: usize,
 ) -> usize {
-    let mut best_total_flow = total_flow;
+    //    println!(
+    //        "I am at {:?} with {} total flow, {} best_total_flow, and {:?} time left.",
+    //        current_position, total_flow, best_total_flow, time_left
+    //    );
 
-    //  println!(
-    //        "I am at {:?} with {} total flow, {} valves open, and {} time left.",
-    //    current_position, total_flow, valves_open, time_left
-    //);
+    if total_flow > best_total_flow {
+        best_total_flow = total_flow;
+    }
+    let mut theoretical_max = total_flow;
+    let mut theoretical_time_left = time_left[0] + time_left[1];
+
+    for valve in remaining_valves.iter() {
+        if theoretical_time_left < 2 {
+            break;
+        }
+        theoretical_time_left -= 2;
+        theoretical_max += theoretical_time_left * valve_map.get(&valve).unwrap().flow_rate;
+    }
+    if theoretical_max <= best_total_flow {
+        //       println!(
+        //          "My theoretical max is {} so I will never be as good as {}. Now I get to skip {} factorial permutations.",
+        //         theoretical_max, best_total_flow, remaining_valves.len()
+        //    );
+        return theoretical_max;
+    }
+
+    //    if theoretical_max <
     for valve in remaining_valves.iter() {
         for player in 0..=1 {
+            //            println!(
+            //                "Let's think about if player {} went to {:?}...",
+            //               player, valve,
+            //            );
             let this_cost = cost_to_open_valve(&current_position[player], &valve, weights);
             if this_cost >= time_left[player] {
-                //            println!(
-                //                "No point in visiting {:?} now, it will take too long.",
-                //                valve
-                //            );
+                //                println!(
+                //                    "No point in visiting {:?} now, it will take too long.",
+                //                    valve
+                //               );
                 continue;
             }
             // now we do the move and the open
@@ -233,12 +259,24 @@ fn try_permutations2(
                 next_time_left,
                 next_total_flow,
                 next_position,
+                best_total_flow,
             );
+            //          println!("recursing returned {}", this_total_flow);
             if this_total_flow > best_total_flow {
+                //            println!(
+                //               "{} is better than my previous best of {}",
+                //              this_total_flow, best_total_flow
+                //         );
                 best_total_flow = this_total_flow;
+            } else {
+                //       println!(
+                //          "Apparently {} is less than than my previous best of {}",
+                //          this_total_flow, best_total_flow
+                //      );
             }
         }
     }
+    //println!("I am about to return {}", best_total_flow);
     best_total_flow
 }
 
@@ -253,6 +291,7 @@ fn solve_part_2(input: &str) -> usize {
         [26, 26],
         0,
         [('A', 'A'), ('A', 'A')],
+        0,
     );
     best_flow
 }
@@ -271,5 +310,5 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
     let real_input = read_to_string("data/input16.txt").unwrap();
     println!("Part 1 solution: {}", solve_part_1(&real_input));
     println!("Part 2 test: {}", solve_part_2(test_input));
-    println!("Part 2 solution: {}", solve_part_2(&real_input));
+    //    println!("Part 2 solution: {}", solve_part_2(&real_input));
 }
