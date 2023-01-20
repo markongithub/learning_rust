@@ -9,12 +9,6 @@ struct Valve {
     exits: Vec<Label>,
 }
 
-struct GameState {
-    time_left: usize,
-    total_release: usize,
-    position: Label,
-}
-
 fn str_to_char_pair(two_char_string: &str) -> Label {
     //    println!("The two character string is {}", two_char_string);
     let mut chars = two_char_string.chars();
@@ -101,6 +95,7 @@ fn cost_to_open_valve(
     weights.get(&(*cur_position, *new_valve)).unwrap() + 1
 }
 
+/*
 fn try_ordering(
     valve_map: &HashMap<Label, Valve>,
     weights: &HashMap<(Label, Label), usize>,
@@ -124,7 +119,7 @@ fn try_ordering(
     }
     return (total_flow, valves_open);
 }
-
+*/
 fn try_permutations(
     valve_map: &HashMap<Label, Valve>,
     weights: &HashMap<(Label, Label), usize>,
@@ -227,7 +222,10 @@ fn try_permutations2(
     }
 
     //    if theoretical_max <
-    for valve in remaining_valves.iter() {
+    let mut remaining_valves_sorted = remaining_valves.into_iter().collect::<Vec<&Label>>();
+    remaining_valves_sorted.sort_by_key(|label| valve_map.get(&label).unwrap().flow_rate);
+    remaining_valves_sorted.reverse();
+    for valve in remaining_valves_sorted.iter() {
         for player in 0..=1 {
             //            println!(
             //                "Let's think about if player {} went to {:?}...",
@@ -249,7 +247,7 @@ fn try_permutations2(
                 total_flow + (next_time_left[player] * valve_map.get(&valve).unwrap().flow_rate);
             let mut next_position: [Label; 2] = [('f', 'u'), ('c', 'k')];
             next_position.copy_from_slice(&current_position);
-            next_position[player] = *valve;
+            next_position[player] = **valve;
             let mut next_remaining_valves = remaining_valves.clone();
             next_remaining_valves.remove(&next_position[player]);
             let this_total_flow = try_permutations2(
@@ -310,5 +308,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
     let real_input = read_to_string("data/input16.txt").unwrap();
     println!("Part 1 solution: {}", solve_part_1(&real_input));
     println!("Part 2 test: {}", solve_part_2(test_input));
-    //    println!("Part 2 solution: {}", solve_part_2(&real_input));
+    println!("Starting part 2 solution. See you in 3 minutes...");
+    println!("Part 2 solution: {}", solve_part_2(&real_input));
 }
