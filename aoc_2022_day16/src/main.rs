@@ -345,7 +345,7 @@ Valve HH has flow rate=22; tunnel leads to valve GG
 Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II";
     println!("Part 1 test: {}", solve_part_1(test_input));
-    let real_input = read_to_string("data/input16.txt").unwrap();
+    let real_input = read_to_string("../data/input16.txt").unwrap();
     println!("Part 1 solution: {}", solve_part_1(&real_input));
     println!("Part 2 test: {}", solve_part_2(test_input));
     println!("Starting part 2 solution. See you in a minute...");
