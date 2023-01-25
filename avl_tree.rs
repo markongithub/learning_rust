@@ -38,8 +38,7 @@ fn rebalance<T: Ord + Debug>(tree: &mut AVLTree<T>) {
 
 fn insert<T: Ord + Debug>(tree: &mut AVLTree<T>, new_label: T) {
     let option_amp_mut: Option<&mut Box<AVLNode<T>>> = tree.as_mut();
-    if option_amp_mut.is_some() {
-        let mut_box: &mut Box<AVLNode<T>> = option_amp_mut.unwrap();
+    if let Some(mut_box) = option_amp_mut {
         let this_label: &T = &mut_box.label;
         let child: &mut AVLTree<T> = if new_label < *this_label {
             &mut mut_box.left
@@ -97,8 +96,7 @@ fn validate<T: Ord + Debug>(tree: &AVLTree<T>) -> i64 {
 
 fn contains<T: Eq + Ord + Debug>(tree: &AVLTree<T>, target: T) -> bool {
     let option_amp_box: Option<&Box<AVLNode<T>>> = tree.as_ref();
-    if option_amp_box.is_some() {
-        let amp_box: &Box<AVLNode<T>> = option_amp_box.unwrap();
+    if let Some(amp_box) = option_amp_box {
         let this_label: &T = &amp_box.label;
         println!("Checking for {0:?} on node {1:?}", target, this_label);
         if target == *this_label {
@@ -228,8 +226,7 @@ fn fix_height<T: Ord + Debug>(tree: &mut AVLTree<T>) {
     // This only works if your two subtrees have accurate height. So fix them
     // first.
     let option_amp_mut: Option<&mut Box<AVLNode<T>>> = tree.as_mut();
-    if option_amp_mut.is_some() {
-        let mut_box: &mut Box<AVLNode<T>> = option_amp_mut.unwrap();
+    if let Some(mut_box) = option_amp_mut {
         let left_height = get_height(&mut_box.left);
         let right_height = get_height(&mut_box.right);
         println!(
