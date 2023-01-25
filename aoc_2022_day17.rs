@@ -218,8 +218,7 @@ fn solve_for_n_rocks(input: &str, n_rocks: usize) -> usize {
             if final_target.is_none() {
                 let clone_of_vector_for_lookup = state.top_row_by_column.clone();
                 let historical_result = history.get(&(clone_of_vector_for_lookup, next_jet));
-                if historical_result.is_some() {
-                    let (previous_fallen, previous_deleted) = historical_result.unwrap();
+                if let Some((previous_fallen, previous_deleted)) = historical_result {
                     /*
                     println!(
                         "We last saw ({:?},{}) when {} rocks had fallen",
