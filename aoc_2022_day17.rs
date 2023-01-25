@@ -137,7 +137,7 @@ fn drop_shape(state: &mut GameState, jets: &Vec<bool>, next_jet: usize, shape: S
 
 fn purge_rows(state: &mut GameState) {
     let rows_to_remove = *state.top_row_by_column.iter().min().unwrap();
-    state.spaces.drain(0..rows_to_remove);
+    state.spaces.drain(..rows_to_remove);
     state.top_row -= rows_to_remove;
     for i in 0..7 {
         state.top_row_by_column[i] -= rows_to_remove;
