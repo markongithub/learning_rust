@@ -124,6 +124,19 @@ fn solve_part_1(input: &str) -> isize {
         .sum()
 }
 
+fn solve_part_2(input: &str) -> isize {
+    let (mut id_to_position, mut position_to_id, id_to_value_tmp) = parse_input(&input);
+    let id_to_value: Vec<isize> = id_to_value_tmp.iter().map(|x| x * 811589153).collect();
+    for _j in 0..10 {
+        for i in 0..id_to_position.len() {
+            mix_one_value(&mut id_to_position, &mut position_to_id, &id_to_value, i);
+        }
+    }
+    grove_values(&id_to_position, &position_to_id, &id_to_value)
+        .iter()
+        .sum()
+}
+
 fn main() {
     let test_input = "1
 2
@@ -135,4 +148,6 @@ fn main() {
     println!("Part 1 test: {}", solve_part_1(&test_input));
     let real_input = read_to_string("../data/input20.txt").unwrap();
     println!("Part 1 solution: {}", solve_part_1(&real_input));
+    println!("Part 2 test: {}", solve_part_2(&test_input));
+    println!("Part 2 solution: {}", solve_part_2(&real_input));
 }
