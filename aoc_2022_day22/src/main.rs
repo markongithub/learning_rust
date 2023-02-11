@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::read_to_string;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,7 +110,7 @@ fn move_distance(
     let mut loopback_spot = start;
     let backwards = opposite_direction(direction);
     loop {
-        let  next_back = move_one(map_width, map_height, loopback_spot, backwards);
+        let next_back = move_one(map_width, map_height, loopback_spot, backwards);
         if next_back == start || map[next_back] == Square::Void {
             break;
         }
@@ -193,6 +194,7 @@ fn start_position(map: &Vec<Square>) -> usize {
     }
     panic!("I didn't find an open square.")
 }
+
 fn solve_part_1(input: &str) -> usize {
     let (map, width, movements) = parse_input(input);
     let mut position = start_position(&map);
@@ -217,6 +219,231 @@ fn solve_part_1(input: &str) -> usize {
     let final_column = (position % width) + 1;
     (1000 * final_row) + (4 * final_column) + direction_value
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Direction3D {
+    Up,
+    Down,
+    Front,
+    Back,
+    Left,
+    Right,
+}
+
+/*
+fn move_from_side(from_side: Direction3D, direction: Direction3D) -> (Direction3D, Direction3D) {
+    match (from_side, direction) {
+        (Side::Top, Direction::Up) => (Side::Back, Direction::Down),
+        (Side::Top, Direction::Left) => (Side::Left, Direction::Down),
+        (Side::Top, Direction::Right) => (Side::Right, Direction::Down),
+        (Side::Top, Direction::Down) => (Side::Front, Direction::Down),
+        (Side::Left, Direction::Up) => (Side::Top, Direction::Right),
+        (Side::Left, Direction::Left) => (Side::Back, Direction::Left),
+        (Side::Left, Direction::Right) => (Side::Front, Direction::Right),
+        (Side::Left, Direction::Down) => (Side::Bottom, Direction::Right),
+        (Side::Right, Direction::Up) => (Side::Top, Direction::Left),
+        (Side::Right, Direction::Left) => (Side::Front, Direction::Left),
+        (Side::Right, Direction::Right) => (Side::Back, Direction::Right),
+        (Side::Right, Direction::Down) => (Side::Bottom, Direction::Left),
+        (Side::Bottom, Direction::Up) => (Side::Front, Direction::Up),
+        (Side::Bottom, Direction::Left) => (Side::Left, Direction::Up),
+        (Side::Bottom, Direction::Right) => (Side::Right, Direction::Up),
+        (Side::Bottom, Direction::Down) => (Side::Back, Direction::Up),
+        (Side::Front, Direction::Up) => (Side::Top, Direction::Up),
+        (Side::Front, Direction::Left) => (Side::Left, Direction::Up),
+        (Side::Front, Direction::Right) => (Side::Right, Direction::Up),
+        (Side::Front, Direction::Down) => (Side::Back, Direction::Up),
+        (Side::Back, Direction::Up) => (Side::Front, Direction::Up),
+        (Side::Back, Direction::Left) => (Side::Left, Direction::Up),
+        (Side::Back, Direction::Right) => (Side::Right, Direction::Up),
+        (Side::Back, Direction::Down) => (Side::Back, Direction::Up),
+
+
+    }
+}
+*/
+
+fn solve_part_2(input: &str) {
+    let (map, width, movements) = parse_input(input);
+    // test input is 12 rows by 16 columns
+    // puzzle input is 200 rows by 150 columns
+    // can't make assumptions about the side length anymore.
+    //  WRONG ->  let side_length = width / 4;
+    // ok this won't work in a general case but it works for both inputs
+    let num_rows = map.len() / width;
+    let mut side_length = width;
+    for y in 0..num_rows {
+        let mut this_row_nonempty = 0;
+        for x in 0..width {
+            if map[(width * y) + x] != Square::Void {
+                this_row_nonempty += 1;
+            }
+        }
+        if this_row_nonempty < side_length {
+            side_length = this_row_nonempty;
+        }
+    }
+    let num_big_rows = num_rows / side_length;
+    let num_big_columns = width / side_length;
+    println!(
+        "The rows are {} squares wide, and I think each side is a square with side length {}. So that means {} big rows and {} big columns?",
+        width, side_length, num_big_rows, num_big_columns
+    );
+    let mut side_coords = vec![];
+    let mut edges_to_explore: Vec<(usize, usize)> = vec![];
+    for row_of_sides in 0..num_big_rows {
+        let map_row = row_of_sides * side_length;
+        for column_of_sides in 0..num_big_columns {
+            let map_column = column_of_sides * side_length;
+            let map_coord = (map_row * width) + map_column;
+            //  println!(
+            //     "Considering big column {} of big row {}, based at ({},{})",
+            //    column_of_sides, row_of_sides, map_column, map_row
+            //);
+            if map[map_coord] != Square::Void {
+                println!(
+                    "There is a side whose upper left corner is {} ({},{})",
+                    map_coord, map_column, map_row
+                );
+                side_coords.push(map_coord);
+                if column_of_sides > 0 {
+                    let side_to_left = map_coord - side_length;
+                    if map[side_to_left] != Square::Void {
+                        println!("  - there is also a side to its left at {}", side_to_left);
+                        edges_to_explore.push((map_coord, side_to_left));
+                    }
+                }
+                if column_of_sides < (num_big_columns - 1) {
+                    let side_to_right = map_coord + side_length;
+                    if map[side_to_right] != Square::Void {
+                        println!("  - there is also a side to its right at {}", side_to_right);
+                        edges_to_explore.push((map_coord, side_to_right));
+                    }
+                }
+                if row_of_sides > 0 {
+                    let side_above = map_coord - (side_length * width);
+                    if map[side_above] != Square::Void {
+                        println!("  - there is also a side above it at {}", side_above);
+                        edges_to_explore.push((map_coord, side_above));
+                    }
+                }
+                if row_of_sides < (num_big_rows - 1) {
+                    let side_below = map_coord + (side_length * width);
+                    if map[side_below] != Square::Void {
+                        println!("  - there is also a side below it at {}", side_below);
+                        edges_to_explore.push((map_coord, side_below));
+                    }
+                }
+            }
+        }
+    }
+    let mut side_directions: HashMap<usize, Direction3D> = Default::default();
+    let mut side_orientations: HashMap<usize, Direction3D> = Default::default();
+    let mut found_first_side: bool = false;
+    for edge_ref in edges_to_explore.iter() {
+        let (from, to): (usize, usize) = *edge_ref;
+        let (from_x, from_y) = square_coords(from, width);
+        if !found_first_side {
+            found_first_side = true;
+            side_directions.insert(from, Direction3D::Front);
+            println!("({},{}) is the front side.", from_x, from_y);
+            side_orientations.insert(from, Direction3D::Up);
+        }
+        if side_directions.contains_key(&to) {
+            continue;
+        }
+        if !side_directions.contains_key(&from) {
+            continue;
+        }
+        let from_side = side_directions.get(&from).unwrap();
+        let from_orientation = side_orientations.get(&from).unwrap();
+        let grid_direction = if to == from + (side_length * width) {
+            Direction::Down
+        } else if to == from + side_length {
+            Direction::Right
+        } else if to == from - side_length {
+            Direction::Left
+        } else if to == from - (side_length * width) {
+            Direction::Up
+        } else {
+            panic!("What direction is {} from {}?", to, from)
+        };
+        println!(
+            "This edge leads grid-{:?} from the {:?} side.",
+            grid_direction, from_side
+        );
+    }
+    /*
+
+    let mut side_iter = side_coords.iter();
+    for side_coord in side_iter {
+        let (x, y) = square_coords(*side_coord, width);
+        if !found_first_side {
+            found_first_side = true;
+            side_directions.insert(*side_coord, Direction3D::Front);
+            println!("({},{}) is the front side.", x, y);
+        }
+        if x == last_x && y - last_y == side_length {
+            println!(
+                "({},{}) and ({},{}) will fold on the x axis.",
+                last_x, last_y, x, y
+            );
+        } else if y == last_y && x - last_x == side_length {
+            println!(
+                "({},{}) and ({},{}) will fold on the y axis.",
+                last_x, last_y, x, y
+            );
+        }
+        last_side = *side_coord;
+    }
+        */
+}
+/*
+fn fold_on_axis(x1: usize, y1: usize, x2: usize, y2: usize, on_x: bool) -> (usize, usize, bool) {
+
+}
+(0,4) and (4,4) will fold on the y axis.
+(4,4) and (8,4) will fold on the y axis.
+(8,4) and (8,8) will fold on the x axis.
+(8,8) and (12,8) will fold on the y axis.
+So as you go from 0,4 towards 4,4 and 4,7 your z remains constant
+let's say you're at 0,4,0 to 4,4,0 or 4,7,0
+but after the fold your x becomes a z
+so when you go from 4,4 to 5,4 on 2d, you go from 4,4,0 to 4,4,1 on 3d
+for any x in {4..7}  and y in {4..7} z = x - 4 and y=y
+but then we fold again at 8,4
+and your z stays constant at 4 and you
+how do we represent this?
+z = ax + by
+no
+B is on the 0,4 plane at 0,6
+D is on the 4,4 plane at 5,4
+(0,4) and (4,4) will fold on the y axis.
+the 0,4 plane is the front at z=0
+the 4,4 plane will be the right and move toward z=1
+in the 4,4 plane x=4 and z=x-4 and y=y
+D=(5,4)=(4,4,1)
+
+(4,4) and (8,4) will fold on the y axis.
+8,4 will be the backwards plane
+in the 8,4 plane z=4 and y=y and x=4-(x-8)=12-x
+A is on the 8,4 plane at 11,6
+A=(11,6)=(1,6,4)
+
+(8,4) and (8,8) will fold on the x axis.
+8,8 is below 8,4 and will be the bottom side
+so z decreases as y increases
+z=4-(y-8)=12-y
+y=8
+x=12-x same as before
+90% sure I learned how to do this with vectors in linear algebra
+
+(8,8) and (12,8) will fold on the y axis.
+12,8 is to the right as you look at the bottom
+12,8 is the left side
+
+*/
+
 fn main() {
     let test_input = "        ...#
     .#..
@@ -226,13 +453,23 @@ fn main() {
 ........#...
 ..#....#....
 ..........#.
-    ...#....
-    .....#..
-    .#......
-    ......#.
+        ...#....
+        .....#..
+        .#......
+        ......#.
 
 10R5L5R10L4R5L5";
     println!("Part 1 test: {:?}", solve_part_1(&test_input));
-    let real_input = read_to_string("data/input22.txt").unwrap();
-    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
+    //    let real_input = read_to_string("data/input22.txt").unwrap();
+    //    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
+    solve_part_2(&test_input);
 }
+// let's say the bottom of 4 is horizontal
+// it goes 0,0,0 to 3,0,0
+// bottom 4 adjoins top 5
+// left 4 adjoins right 3
+// top 4 adjoins bottom 1
+// right 4?
+// 4 goes from 0,0,0 to 3,3,0
+// when you hit the top of 4 and go up you turn 90 degrees
+// 1 goes from 0,3,0 to 0,3,3
