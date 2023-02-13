@@ -301,7 +301,7 @@ then map the four grid directions onto that! OMG!
 
 */
 
-fn turn_on_surface(
+fn convert_grid_direction(
     side: Direction3D,
     grid_up: Direction3D,
     grid_direction: Direction,
@@ -355,6 +355,67 @@ fn turn_on_surface(
     }
 
     four_possible_directions[(rotation_count + (grid_direction as usize)) % 4]
+}
+
+fn get_grid_up(
+    side: Direction3D,
+    grid_direction: Direction,
+    where_it_goes: Direction3D,
+) -> Direction3D {
+    let four_possible_directions: Vec<Direction3D> = match side {
+        Direction3D::Front => vec![
+            Direction3D::Up,
+            Direction3D::Right,
+            Direction3D::Down,
+            Direction3D::Left,
+        ],
+        Direction3D::Back => vec![
+            Direction3D::Up,
+            Direction3D::Left,
+            Direction3D::Down,
+            Direction3D::Right,
+        ],
+        Direction3D::Up => vec![
+            Direction3D::Back,
+            Direction3D::Right,
+            Direction3D::Front,
+            Direction3D::Left,
+        ],
+        Direction3D::Down => vec![
+            Direction3D::Front,
+            Direction3D::Right,
+            Direction3D::Back,
+            Direction3D::Left,
+        ],
+        Direction3D::Right => vec![
+            Direction3D::Up,
+            Direction3D::Back,
+            Direction3D::Down,
+            Direction3D::Front,
+        ],
+        Direction3D::Left => vec![
+            Direction3D::Up,
+            Direction3D::Front,
+            Direction3D::Down,
+            Direction3D::Back,
+        ],
+    };
+
+    let mut direction_3d_index = 0;
+    // I think I can do this faster.
+    for i in 0..4 {
+        if four_possible_directions[i] == where_it_goes {
+            direction_3d_index = i;
+            break;
+        }
+    }
+    let direction_2d_index = grid_direction as usize;
+    let rotation = if direction_2d_index > direction_3d_index {
+        (direction_3d_index + 4) - direction_2d_index
+    } else {
+        direction_3d_index - direction_2d_index
+    };
+    four_possible_directions[rotation]
 }
 
 fn solve_part_2(input: &str) {
@@ -434,44 +495,66 @@ fn solve_part_2(input: &str) {
     let mut side_directions: HashMap<usize, Direction3D> = Default::default();
     let mut side_orientations: HashMap<usize, Direction3D> = Default::default();
     let mut found_first_side: bool = false;
-    for edge_ref in edges_to_explore.iter() {
-        let (from, to): (usize, usize) = *edge_ref;
-        let (from_x, from_y) = square_coords(from, width);
-        if !found_first_side {
-            found_first_side = true;
-            side_directions.insert(from, Direction3D::Front);
-            println!("({},{}) is the front side.", from_x, from_y);
-            side_orientations.insert(from, Direction3D::Up);
-        }
-        if side_directions.contains_key(&to) {
-            continue;
-        }
-        if !side_directions.contains_key(&from) {
-            continue;
-        }
-        let from_side = side_directions.get(&from).unwrap();
-        let from_orientation = side_orientations.get(&from).unwrap();
-        let grid_direction = if to == from + (side_length * width) {
-            Direction::Down
-        } else if to == from + side_length {
-            Direction::Right
-        } else if to == from - side_length {
-            Direction::Left
-        } else if to == from - (side_length * width) {
-            Direction::Up
-        } else {
-            panic!("What direction is {} from {}?", to, from)
-        };
-        let next_side = turn_on_surface(*from_side, *from_orientation, grid_direction);
-        println!(
-                "This edge leads grid-{:?} from the {:?} side, where grid-Up means {:?}. So our next side is {:?}.",
-                grid_direction, from_side, from_orientation, next_side
+    loop {
+        let mut sides_added = 0;
+        for edge_ref in edges_to_explore.iter() {
+            let (from, to): (usize, usize) = *edge_ref;
+            let (from_x, from_y) = square_coords(from, width);
+            if !found_first_side {
+                found_first_side = true;
+                side_directions.insert(from, Direction3D::Front);
+                println!("({},{}) is the front side.", from_x, from_y);
+                side_orientations.insert(from, Direction3D::Up);
+            }
+            if side_directions.contains_key(&to) {
+                continue;
+            }
+            if !side_directions.contains_key(&from) {
+                continue;
+            }
+            let from_side = side_directions.get(&from).unwrap();
+            let from_orientation = side_orientations.get(&from).unwrap();
+            let grid_direction = if to == from + (side_length * width) {
+                Direction::Down
+            } else if to == from + side_length {
+                Direction::Right
+            } else if to == from - side_length {
+                Direction::Left
+            } else if to == from - (side_length * width) {
+                Direction::Up
+            } else {
+                panic!("What direction is {} from {}?", to, from)
+            };
+            let next_side = convert_grid_direction(*from_side, *from_orientation, grid_direction);
+            let (to_x, to_y) = square_coords(to, width);
+            println!(
+                "This edge leads grid-{:?} from the {:?} side, where grid-Up means {:?}. So our next side ({},{}) is {:?}.",
+                grid_direction, from_side, from_orientation, to_x, to_y, next_side
             );
-        //        side_directions.insert(to, next_side);
-        // So we combine grid_direction and from_orientation to get the direction of the new side.
-        // Up + Up -> Top
-        // if my grid-up is Front I have to know which side I am on
-        // Right + Right -> Down -> Bottom
+            /*
+            fn get_grid_up(
+                side: Direction3D,
+                grid_direction: Direction,
+                where_it_goes: Direction3D,
+            ) -> Direction3D {
+                */
+            let next_orientation =
+                get_grid_up(next_side, opposite_direction(grid_direction), *from_side);
+            println!(
+                "Grid-up on the {:?} side will be {:?}",
+                next_side, next_orientation
+            );
+            side_directions.insert(to, next_side);
+            side_orientations.insert(to, next_orientation);
+            sides_added += 1;
+            // So we combine grid_direction and from_orientation to get the direction of the new side.
+            // Up + Up -> Top
+            // if my grid-up is Front I have to know which side I am on
+            // Right + Right -> Down -> Bottom
+        }
+        if sides_added == 0 {
+            break;
+        }
     }
     /*
 
