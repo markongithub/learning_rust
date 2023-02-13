@@ -425,6 +425,10 @@ fn solve_part_2(input: &str) {
     // can't make assumptions about the side length anymore.
     //  WRONG ->  let side_length = width / 4;
     // ok this won't work in a general case but it works for both inputs
+    let _side_map = fold_cube(map, width);
+}
+
+fn fold_cube(map: Vec<Square>, width: usize) -> HashMap<usize, (Direction3D, Direction3D)> {
     let num_rows = map.len() / width;
     let mut side_length = width;
     for y in 0..num_rows {
@@ -492,8 +496,7 @@ fn solve_part_2(input: &str) {
             }
         }
     }
-    let mut side_directions: HashMap<usize, Direction3D> = Default::default();
-    let mut side_orientations: HashMap<usize, Direction3D> = Default::default();
+    let mut side_map: HashMap<usize, (Direction3D, Direction3D)> = Default::default();
     let mut found_first_side: bool = false;
     loop {
         let mut sides_added = 0;
@@ -502,18 +505,16 @@ fn solve_part_2(input: &str) {
             let (from_x, from_y) = square_coords(from, width);
             if !found_first_side {
                 found_first_side = true;
-                side_directions.insert(from, Direction3D::Front);
+                side_map.insert(from, (Direction3D::Front, Direction3D::Up));
                 println!("({},{}) is the front side.", from_x, from_y);
-                side_orientations.insert(from, Direction3D::Up);
             }
-            if side_directions.contains_key(&to) {
+            if side_map.contains_key(&to) {
                 continue;
             }
-            if !side_directions.contains_key(&from) {
+            if !side_map.contains_key(&from) {
                 continue;
             }
-            let from_side = side_directions.get(&from).unwrap();
-            let from_orientation = side_orientations.get(&from).unwrap();
+            let (from_side, from_orientation) = *side_map.get(&from).unwrap();
             let grid_direction = if to == from + (side_length * width) {
                 Direction::Down
             } else if to == from + side_length {
@@ -525,7 +526,7 @@ fn solve_part_2(input: &str) {
             } else {
                 panic!("What direction is {} from {}?", to, from)
             };
-            let next_side = convert_grid_direction(*from_side, *from_orientation, grid_direction);
+            let next_side = convert_grid_direction(from_side, from_orientation, grid_direction);
             let (to_x, to_y) = square_coords(to, width);
             println!(
                 "This edge leads grid-{:?} from the {:?} side, where grid-Up means {:?}. So our next side ({},{}) is {:?}.",
@@ -539,13 +540,12 @@ fn solve_part_2(input: &str) {
             ) -> Direction3D {
                 */
             let next_orientation =
-                get_grid_up(next_side, opposite_direction(grid_direction), *from_side);
+                get_grid_up(next_side, opposite_direction(grid_direction), from_side);
             println!(
                 "Grid-up on the {:?} side will be {:?}",
                 next_side, next_orientation
             );
-            side_directions.insert(to, next_side);
-            side_orientations.insert(to, next_orientation);
+            side_map.insert(to, (next_side, next_orientation));
             sides_added += 1;
             // So we combine grid_direction and from_orientation to get the direction of the new side.
             // Up + Up -> Top
@@ -556,30 +556,7 @@ fn solve_part_2(input: &str) {
             break;
         }
     }
-    /*
-
-    let mut side_iter = side_coords.iter();
-    for side_coord in side_iter {
-        let (x, y) = square_coords(*side_coord, width);
-        if !found_first_side {
-            found_first_side = true;
-            side_directions.insert(*side_coord, Direction3D::Front);
-            println!("({},{}) is the front side.", x, y);
-        }
-        if x == last_x && y - last_y == side_length {
-            println!(
-                "({},{}) and ({},{}) will fold on the x axis.",
-                last_x, last_y, x, y
-            );
-        } else if y == last_y && x - last_x == side_length {
-            println!(
-                "({},{}) and ({},{}) will fold on the y axis.",
-                last_x, last_y, x, y
-            );
-        }
-        last_side = *side_coord;
-    }
-        */
+    side_map
 }
 /*
 fn fold_on_axis(x1: usize, y1: usize, x2: usize, y2: usize, on_x: bool) -> (usize, usize, bool) {
