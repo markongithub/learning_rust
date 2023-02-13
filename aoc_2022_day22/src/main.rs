@@ -4,9 +4,9 @@ use std::fs::read_to_string;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Direction {
     Up,
+    Right,
     Down,
     Left,
-    Right,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -263,6 +263,100 @@ fn move_from_side(from_side: Direction3D, direction: Direction3D) -> (Direction3
 }
 */
 
+/*
+fn orientation_to_direction(grid_direction: Direction, orientation: Direction3D) -> Direction3D {
+    match (grid_direction, orientation) {
+        Direction::Up ->
+    }
+}
+*/
+
+/*
+fn turn_right(side: Direction3D, direction: Direction3D) -> Direction3D {
+    match (side, direction) {
+        (Direction3D::Front, d)  => Direction3D::Right,
+        Direction3D:: => Direction3D::Right,
+
+    }
+}
+*/
+
+/*
+on front, grid-up is up, then every grid direction = its 2d equivalent
+can we do this with coordinates, I ask again?
+up = y+, down = y-, left = x-, etc
+No I don't think so
+but this is going to require 6 X 4 X 4 = 96 match cases unless I figure out a better way
+what if we say on front the four possible directions clockwise are up right down left
+and then we apply a shift using those?
+E is back and its grid up is bottom
+grid up is bottom, grid right is still right I think? why?
+because the grid-up and being back cancel each other out?
+
+back's four directions are top left bottom right (NOTE the left and right)
+to turn right, go one right in that list
+if gu is bottom turn right twice first
+since gu is bottom, shift by 2 -> bottom right top left
+then map the four grid directions onto that! OMG!
+
+*/
+
+fn turn_on_surface(
+    side: Direction3D,
+    grid_up: Direction3D,
+    grid_direction: Direction,
+) -> Direction3D {
+    let four_possible_directions: Vec<Direction3D> = match side {
+        Direction3D::Front => vec![
+            Direction3D::Up,
+            Direction3D::Right,
+            Direction3D::Down,
+            Direction3D::Left,
+        ],
+        Direction3D::Back => vec![
+            Direction3D::Up,
+            Direction3D::Left,
+            Direction3D::Down,
+            Direction3D::Right,
+        ],
+        Direction3D::Up => vec![
+            Direction3D::Back,
+            Direction3D::Right,
+            Direction3D::Front,
+            Direction3D::Left,
+        ],
+        Direction3D::Down => vec![
+            Direction3D::Front,
+            Direction3D::Right,
+            Direction3D::Back,
+            Direction3D::Left,
+        ],
+        Direction3D::Right => vec![
+            Direction3D::Up,
+            Direction3D::Back,
+            Direction3D::Down,
+            Direction3D::Front,
+        ],
+        Direction3D::Left => vec![
+            Direction3D::Up,
+            Direction3D::Front,
+            Direction3D::Down,
+            Direction3D::Back,
+        ],
+    };
+
+    let mut rotation_count = 0;
+    // I think I can do this faster.
+    for i in 0..4 {
+        if four_possible_directions[i] == grid_up {
+            rotation_count = i;
+            break;
+        }
+    }
+
+    four_possible_directions[(rotation_count + (grid_direction as usize)) % 4]
+}
+
 fn solve_part_2(input: &str) {
     let (map, width, movements) = parse_input(input);
     // test input is 12 rows by 16 columns
@@ -368,10 +462,16 @@ fn solve_part_2(input: &str) {
         } else {
             panic!("What direction is {} from {}?", to, from)
         };
+        let next_side = turn_on_surface(*from_side, *from_orientation, grid_direction);
         println!(
-            "This edge leads grid-{:?} from the {:?} side.",
-            grid_direction, from_side
-        );
+                "This edge leads grid-{:?} from the {:?} side, where grid-Up means {:?}. So our next side is {:?}.",
+                grid_direction, from_side, from_orientation, next_side
+            );
+        //        side_directions.insert(to, next_side);
+        // So we combine grid_direction and from_orientation to get the direction of the new side.
+        // Up + Up -> Top
+        // if my grid-up is Front I have to know which side I am on
+        // Right + Right -> Down -> Bottom
     }
     /*
 
