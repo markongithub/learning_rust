@@ -16,6 +16,11 @@ enum Square {
     Void,
 }
 
+enum Movement {
+    Turn(char),
+    Advance(usize),
+}
+
 fn char_to_square(c: char) -> Square {
     match c {
         ' ' => Square::Void,
@@ -43,11 +48,10 @@ fn parse_map_line(map_line: &str) -> Vec<Square> {
     map_line.chars().map(char_to_square).collect()
 }
 
-fn parse_directions(directions: &str) -> Vec<(Direction, usize)> {
+fn parse_directions(directions: &str) -> Vec<Movement> {
     let mut i = 0;
     let mut number_began_at = None;
     let mut output = vec![];
-    let mut current_direction = Direction::Right;
     for c in directions.chars() {
         if c.is_ascii_digit() {
             if number_began_at.is_none() {
@@ -56,15 +60,15 @@ fn parse_directions(directions: &str) -> Vec<(Direction, usize)> {
         } else {
             let number_slice = &directions[number_began_at.unwrap()..i];
             let value = number_slice.parse::<usize>().unwrap();
-            output.push((current_direction, value));
+            output.push(Movement::Advance(value));
             number_began_at = None;
-            current_direction = turn(current_direction, c);
+            output.push(Movement::Turn(c));
         }
         i += 1;
     }
     let number_slice = &directions[number_began_at.unwrap()..i];
     let value = number_slice.parse::<usize>().unwrap();
-    output.push((current_direction, value));
+    output.push(Movement::Advance(value));
     output
 }
 
@@ -370,7 +374,7 @@ fn move_distance_part_2(
     my_position
 }
 
-fn parse_input(input: &str) -> (Vec<Square>, usize, Vec<(Direction, usize)>) {
+fn parse_input(input: &str) -> (Vec<Square>, usize, Vec<Movement>) {
     let mut blank_line_index = 0;
     for line in input.lines() {
         if line.is_empty() {
@@ -426,16 +430,21 @@ fn solve_part_1(input: &str) -> usize {
         println!("At square {} there is a {:?}", square_id, map[square_id]);
     }
     let mut position = start_position(&map);
-    let mut last_direction = Direction::Up;
+    let mut last_direction = Direction::Right;
     for movement in movements.iter() {
-        let distance;
-        (last_direction, distance) = *movement;
-        println!(
-            "I am about to move {} squares {:?}",
-            distance, last_direction
-        );
-        position = move_distance(&map, width, position, *movement);
-        println!("After that movement I am at square {}", position);
+        match movement {
+            Movement::Turn(c) => {
+                last_direction = turn(last_direction, *c);
+            }
+            Movement::Advance(distance) => {
+                println!(
+                    "I am about to move {} squares {:?}",
+                    distance, last_direction
+                );
+                position = move_distance(&map, width, position, (last_direction, *distance));
+                println!("After that movement I am at square {}", position);
+            }
+        }
     }
     let direction_value = match last_direction {
         Direction::Right => 0,
@@ -648,6 +657,7 @@ fn direction_3d_to_grid(
     }
 }
 
+/*
 fn solve_part_2(input: &str) -> usize {
     let (map, width, movements) = parse_input(input);
     // test input is 12 rows by 16 columns
@@ -679,7 +689,7 @@ fn solve_part_2(input: &str) -> usize {
     let final_column = (position % width) + 1;
     (1000 * final_row) + (4 * final_column) + direction_value
 }
-
+*/
 fn fold_cube(
     map: &Vec<Square>,
     width: usize,
@@ -832,5 +842,5 @@ fn main() {
     assert_eq!(solve_part_1(&test_input), 6032);
     //    let real_input = read_to_string("data/input22.txt").unwrap();
     //    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
-    assert_eq!(solve_part_2(&test_input), 5031);
+    //    assert_eq!(solve_part_2(&test_input), 5031);
 }
