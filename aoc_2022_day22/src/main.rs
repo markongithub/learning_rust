@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::read_to_string;
+// use std::fs::read_to_string;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Direction {
@@ -99,6 +99,51 @@ fn move_one(map_width: usize, map_height: usize, start: usize, direction: Direct
     (new_y * map_width) + new_x
 }
 
+fn move_one_part_2(
+    map_width: usize,
+    map_height: usize,
+    start: usize,
+    direction: Direction,
+    side_map: &HashMap<usize, (Direction3D, Direction3D)>,
+    side_length: usize,
+) -> (usize, Direction) {
+    let (old_x, old_y) = square_coords(start, map_width);
+    match direction {
+        Direction::Up => {
+            if old_y == 0 {
+                go_around_corner(side_map, side_length, map_width, start, direction)
+            } else {
+                (two_coords_to_one(map_width, old_x, old_y - 1), direction)
+            }
+        }
+        Direction::Down => {
+            if old_y == map_height - 1 {
+                go_around_corner(side_map, side_length, map_width, start, direction)
+            } else {
+                (two_coords_to_one(map_width, old_x, old_y + 1), direction)
+            }
+        }
+        Direction::Left => {
+            if old_x == 0 {
+                go_around_corner(side_map, side_length, map_width, start, direction)
+            } else {
+                (two_coords_to_one(map_width, old_x - 1, old_y), direction)
+            }
+        }
+        Direction::Right => {
+            if old_x == map_width - 1 {
+                go_around_corner(side_map, side_length, map_width, start, direction)
+            } else {
+                (two_coords_to_one(map_width, old_x + 1, old_y), direction)
+            }
+        }
+    }
+}
+
+fn two_coords_to_one(map_width: usize, x: usize, y: usize) -> usize {
+    (y * map_width) + x
+}
+
 fn move_distance(
     map: &Vec<Square>,
     map_width: usize,
@@ -106,21 +151,6 @@ fn move_distance(
     (direction, distance): (Direction, usize),
 ) -> usize {
     let map_height = map.len() / map_width;
-    // first find our loopback spot
-    let mut loopback_spot = start;
-    let backwards = opposite_direction(direction);
-    loop {
-        let next_back = move_one(map_width, map_height, loopback_spot, backwards);
-        if next_back == start || map[next_back] == Square::Void {
-            break;
-        }
-        loopback_spot = next_back;
-    }
-    println!(
-        "If I hit a void I will loop back to {:?}",
-        square_coords(loopback_spot, map_width)
-    );
-
     let mut my_position = start;
     for _i in 1..=distance {
         let next_position = move_one(map_width, map_height, my_position, direction);
@@ -133,6 +163,21 @@ fn move_distance(
                     "There is a void at square {:?}.",
                     square_coords(next_position, map_width)
                 );
+                // first find our loopback spot
+                let mut loopback_spot = start;
+                let backwards = opposite_direction(direction);
+                loop {
+                    let next_back = move_one(map_width, map_height, loopback_spot, backwards);
+                    if next_back == start || map[next_back] == Square::Void {
+                        break;
+                    }
+                    loopback_spot = next_back;
+                }
+                println!(
+                    "If I hit a void I will loop back to {:?}",
+                    square_coords(loopback_spot, map_width)
+                );
+
                 if map[loopback_spot] == Square::Wall {
                     println!(
                         "... and a wall at {:?} so I am done.",
@@ -159,6 +204,172 @@ fn move_distance(
     my_position
 }
 
+fn side_to_orientation(
+    side_map: &HashMap<usize, (Direction3D, Direction3D)>,
+    side: Direction3D,
+) -> Direction3D {
+    // this is so fucking terrible
+    for (_, (this_side, this_orientation)) in side_map.iter() {
+        if *this_side == side {
+            return *this_orientation;
+        }
+    }
+    panic!("I didn't find the side I wanted.")
+}
+
+fn go_around_corner(
+    side_map: &HashMap<usize, (Direction3D, Direction3D)>,
+    side_length: usize,
+    map_width: usize,
+    start: usize,
+    direction: Direction,
+) -> (usize, Direction) {
+    // what are the possible coords in side_map if side_len is X
+    let (x, y) = square_coords(start, map_width);
+    let upper_left_x = side_length * (x / side_length);
+    let upper_left_y = side_length * (y / side_length);
+    let upper_left = (upper_left_y * map_width) + upper_left_x;
+    println!(
+        "My coordinates are ({},{}) so I think my upper left is {}",
+        x, y, upper_left
+    );
+    let (side, orientation) = *side_map.get(&upper_left).unwrap();
+    let next_side = convert_grid_direction(side, orientation, direction);
+    println!(
+        "I am going grid-{:?} from the {:?} side to the {:?} side.",
+        direction, side, next_side
+    );
+    // okay I still need to know my direction on the new side
+    // say I was going grid-up from Right3 to Front3
+    // I guess on Front3 I am coming from Right3
+    let next_side_orientation = side_to_orientation(side_map, next_side);
+    let source_direction = direction_3d_to_grid(next_side, side, next_side_orientation);
+    println!(
+        "To get back to {:?} from {:?} means going grid-{:?}",
+        side, next_side, source_direction
+    );
+    let final_direction = opposite_direction(source_direction);
+    let lateral_position =
+        get_lateral_exit_position(upper_left, side_length, map_width, start, direction);
+    let mut next_upper_left = 0; // why do I have to do this
+    for (coord, (side_val, _)) in side_map.iter() {
+        if *side_val == next_side {
+            next_upper_left = *coord;
+            break;
+        }
+    }
+    let next_position = get_entry_position(
+        next_upper_left,
+        side_length,
+        map_width,
+        lateral_position,
+        final_direction,
+    );
+    let (final_x, final_y) = square_coords(next_position, map_width);
+    println!(
+        "So now I am going grid-{:?} from ({},{})",
+        final_direction, final_x, final_y
+    );
+    (next_position, final_direction)
+}
+
+fn get_lateral_exit_position(
+    upper_left: usize,
+    side_length: usize,
+    map_width: usize,
+    start: usize,
+    direction: Direction,
+) -> usize {
+    let (upper_left_x, upper_left_y) = square_coords(upper_left, map_width);
+    let (x, y) = square_coords(start, map_width);
+    match direction {
+        Direction::Up => x - upper_left_x,
+        Direction::Right => y - upper_left_y,
+        Direction::Down => (upper_left_x + side_length) - (x + 1),
+        Direction::Left => (upper_left_y + side_length) - (y + 1),
+    }
+}
+
+fn get_entry_position(
+    upper_left: usize,
+    side_length: usize,
+    map_width: usize,
+    lateral_position: usize,
+    direction: Direction,
+) -> usize {
+    let (upper_left_x, upper_left_y) = square_coords(upper_left, map_width);
+    let max_x = upper_left_x + side_length - 1;
+    let max_y = upper_left_y + side_length - 1;
+    let (x, y) = match direction {
+        Direction::Up => (upper_left_x + lateral_position, max_y),
+        Direction::Right => (upper_left_x, upper_left_y + lateral_position),
+        Direction::Down => (max_x - lateral_position, upper_left_y),
+        Direction::Left => (max_x, max_y - lateral_position),
+    };
+    x + (map_width * y)
+}
+
+fn move_distance_part_2(
+    map: &Vec<Square>,
+    map_width: usize,
+    side_map: &HashMap<usize, (Direction3D, Direction3D)>,
+    side_length: usize,
+    start: usize,
+    (start_direction, distance): (Direction, usize),
+) -> usize {
+    let map_height = map.len() / map_width;
+    let mut my_position = start;
+    let mut direction = start_direction;
+    for _i in 1..=distance {
+        let (next_position, next_direction) = move_one_part_2(
+            map_width,
+            map_height,
+            my_position,
+            direction,
+            side_map,
+            side_length,
+        );
+        match map[next_position] {
+            Square::Open => {
+                my_position = next_position;
+                direction = next_direction;
+            }
+            Square::Void => {
+                println!(
+                    "There is a void at square {:?}.",
+                    square_coords(next_position, map_width)
+                );
+                // we need to find our next square
+                let (around_corner, turned_direction) =
+                    go_around_corner(side_map, side_length, map_width, my_position, direction);
+
+                if map[around_corner] == Square::Wall {
+                    println!(
+                        "... and a wall at {:?} so I am done.",
+                        square_coords(around_corner, map_width)
+                    );
+                    break;
+                } else {
+                    my_position = around_corner;
+                    direction = turned_direction;
+                }
+            }
+            Square::Wall => {
+                println!(
+                    "There is a wall at square {:?}.",
+                    square_coords(next_position, map_width)
+                );
+                break;
+            }
+        }
+        println!(
+            "I have moved to square {:?}",
+            square_coords(my_position, map_width)
+        );
+    }
+    my_position
+}
+
 fn parse_input(input: &str) -> (Vec<Square>, usize, Vec<(Direction, usize)>) {
     let mut blank_line_index = 0;
     for line in input.lines() {
@@ -175,13 +386,26 @@ fn parse_input(input: &str) -> (Vec<Square>, usize, Vec<(Direction, usize)>) {
         .into_iter()
         .max()
         .unwrap();
+    println!(
+        "I think the widest line I found was {} characters.",
+        max_map_line_len
+    );
+    for line in input.lines() {
+        println!("This line has {} characters: {}", line.len(), line);
+    }
     let mut squares = vec![];
+    let mut line_id = 0;
     for map_line in input.lines().take(blank_line_index) {
         let padding_len = max_map_line_len - map_line.len();
         squares.append(&mut parse_map_line(&map_line));
-        for i in 1..=padding_len {
+        println!(
+            "I am appending {} void squares to line {}",
+            padding_len, line_id
+        );
+        for _i in 1..=padding_len {
             squares.push(Square::Void);
         }
+        line_id += 1;
     }
     let directions_line = input.lines().skip(blank_line_index + 1).next().unwrap();
     (squares, max_map_line_len, parse_directions(directions_line))
@@ -197,6 +421,10 @@ fn start_position(map: &Vec<Square>) -> usize {
 
 fn solve_part_1(input: &str) -> usize {
     let (map, width, movements) = parse_input(input);
+    println!("The map is of width {}", width);
+    for square_id in 0..map.len() {
+        println!("At square {} there is a {:?}", square_id, map[square_id]);
+    }
     let mut position = start_position(&map);
     let mut last_direction = Direction::Up;
     for movement in movements.iter() {
@@ -229,77 +457,6 @@ enum Direction3D {
     Left,
     Right,
 }
-
-/*
-fn move_from_side(from_side: Direction3D, direction: Direction3D) -> (Direction3D, Direction3D) {
-    match (from_side, direction) {
-        (Side::Top, Direction::Up) => (Side::Back, Direction::Down),
-        (Side::Top, Direction::Left) => (Side::Left, Direction::Down),
-        (Side::Top, Direction::Right) => (Side::Right, Direction::Down),
-        (Side::Top, Direction::Down) => (Side::Front, Direction::Down),
-        (Side::Left, Direction::Up) => (Side::Top, Direction::Right),
-        (Side::Left, Direction::Left) => (Side::Back, Direction::Left),
-        (Side::Left, Direction::Right) => (Side::Front, Direction::Right),
-        (Side::Left, Direction::Down) => (Side::Bottom, Direction::Right),
-        (Side::Right, Direction::Up) => (Side::Top, Direction::Left),
-        (Side::Right, Direction::Left) => (Side::Front, Direction::Left),
-        (Side::Right, Direction::Right) => (Side::Back, Direction::Right),
-        (Side::Right, Direction::Down) => (Side::Bottom, Direction::Left),
-        (Side::Bottom, Direction::Up) => (Side::Front, Direction::Up),
-        (Side::Bottom, Direction::Left) => (Side::Left, Direction::Up),
-        (Side::Bottom, Direction::Right) => (Side::Right, Direction::Up),
-        (Side::Bottom, Direction::Down) => (Side::Back, Direction::Up),
-        (Side::Front, Direction::Up) => (Side::Top, Direction::Up),
-        (Side::Front, Direction::Left) => (Side::Left, Direction::Up),
-        (Side::Front, Direction::Right) => (Side::Right, Direction::Up),
-        (Side::Front, Direction::Down) => (Side::Back, Direction::Up),
-        (Side::Back, Direction::Up) => (Side::Front, Direction::Up),
-        (Side::Back, Direction::Left) => (Side::Left, Direction::Up),
-        (Side::Back, Direction::Right) => (Side::Right, Direction::Up),
-        (Side::Back, Direction::Down) => (Side::Back, Direction::Up),
-
-
-    }
-}
-*/
-
-/*
-fn orientation_to_direction(grid_direction: Direction, orientation: Direction3D) -> Direction3D {
-    match (grid_direction, orientation) {
-        Direction::Up ->
-    }
-}
-*/
-
-/*
-fn turn_right(side: Direction3D, direction: Direction3D) -> Direction3D {
-    match (side, direction) {
-        (Direction3D::Front, d)  => Direction3D::Right,
-        Direction3D:: => Direction3D::Right,
-
-    }
-}
-*/
-
-/*
-on front, grid-up is up, then every grid direction = its 2d equivalent
-can we do this with coordinates, I ask again?
-up = y+, down = y-, left = x-, etc
-No I don't think so
-but this is going to require 6 X 4 X 4 = 96 match cases unless I figure out a better way
-what if we say on front the four possible directions clockwise are up right down left
-and then we apply a shift using those?
-E is back and its grid up is bottom
-grid up is bottom, grid right is still right I think? why?
-because the grid-up and being back cancel each other out?
-
-back's four directions are top left bottom right (NOTE the left and right)
-to turn right, go one right in that list
-if gu is bottom turn right twice first
-since gu is bottom, shift by 2 -> bottom right top left
-then map the four grid directions onto that! OMG!
-
-*/
 
 fn convert_grid_direction(
     side: Direction3D,
@@ -418,17 +575,115 @@ fn get_grid_up(
     four_possible_directions[rotation]
 }
 
-fn solve_part_2(input: &str) {
+fn direction_3d_to_grid(
+    side: Direction3D,
+    destination_side: Direction3D,
+    orientation: Direction3D,
+) -> Direction {
+    let four_possible_directions: Vec<Direction3D> = match side {
+        Direction3D::Front => vec![
+            Direction3D::Up,
+            Direction3D::Right,
+            Direction3D::Down,
+            Direction3D::Left,
+        ],
+        Direction3D::Back => vec![
+            Direction3D::Up,
+            Direction3D::Left,
+            Direction3D::Down,
+            Direction3D::Right,
+        ],
+        Direction3D::Up => vec![
+            Direction3D::Back,
+            Direction3D::Right,
+            Direction3D::Front,
+            Direction3D::Left,
+        ],
+        Direction3D::Down => vec![
+            Direction3D::Front,
+            Direction3D::Right,
+            Direction3D::Back,
+            Direction3D::Left,
+        ],
+        Direction3D::Right => vec![
+            Direction3D::Up,
+            Direction3D::Back,
+            Direction3D::Down,
+            Direction3D::Front,
+        ],
+        Direction3D::Left => vec![
+            Direction3D::Up,
+            Direction3D::Front,
+            Direction3D::Down,
+            Direction3D::Back,
+        ],
+    };
+
+    let mut rotation = 0;
+    // So say I am on Right and my Grid-Up is Down, which is index 2
+    // in my four possible directions.
+    for i in 0..4 {
+        if four_possible_directions[i] == orientation {
+            rotation = i;
+            break;
+        }
+    }
+    // so rotation = 2
+    // so say I want to find the Back side. That is index 1 in my four.
+    let mut direction_3d_index = 0;
+    for i in 0..4 {
+        if four_possible_directions[i] == destination_side {
+            direction_3d_index = i;
+            break;
+        }
+    }
+    // so direction_3d_index = 1
+    // I think I just want 1 + 2 mod 4
+    match (rotation + direction_3d_index) % 4 {
+        0 => Direction::Up,
+        1 => Direction::Right,
+        2 => Direction::Down,
+        3 => Direction::Left,
+        q => panic!("I modded a value by 4 and got {}", q),
+    }
+}
+
+fn solve_part_2(input: &str) -> usize {
     let (map, width, movements) = parse_input(input);
     // test input is 12 rows by 16 columns
     // puzzle input is 200 rows by 150 columns
     // can't make assumptions about the side length anymore.
     //  WRONG ->  let side_length = width / 4;
     // ok this won't work in a general case but it works for both inputs
-    let _side_map = fold_cube(map, width);
+    let (side_map, side_length) = fold_cube(&map, width);
+
+    let mut position = start_position(&map);
+    let mut last_direction = Direction::Up;
+    for movement in movements.iter() {
+        let distance;
+        (last_direction, distance) = *movement;
+        println!(
+            "I am about to move {} squares {:?}",
+            distance, last_direction
+        );
+        position = move_distance_part_2(&map, width, &side_map, side_length, position, *movement);
+        println!("After that movement I am at square {}", position);
+    }
+    let direction_value = match last_direction {
+        Direction::Right => 0,
+        Direction::Down => 1,
+        Direction::Left => 2,
+        Direction::Up => 3,
+    };
+    let final_row = (position / width) + 1;
+    let final_column = (position % width) + 1;
+    (1000 * final_row) + (4 * final_column) + direction_value
 }
 
-fn fold_cube(map: Vec<Square>, width: usize) -> HashMap<usize, (Direction3D, Direction3D)> {
+fn fold_cube(
+    map: &Vec<Square>,
+    width: usize,
+) -> (HashMap<usize, (Direction3D, Direction3D)>, usize) {
     let num_rows = map.len() / width;
     let mut side_length = width;
     for y in 0..num_rows {
@@ -556,59 +811,14 @@ fn fold_cube(map: Vec<Square>, width: usize) -> HashMap<usize, (Direction3D, Dir
             break;
         }
     }
-    side_map
+    (side_map, side_length)
 }
-/*
-fn fold_on_axis(x1: usize, y1: usize, x2: usize, y2: usize, on_x: bool) -> (usize, usize, bool) {
-
-}
-(0,4) and (4,4) will fold on the y axis.
-(4,4) and (8,4) will fold on the y axis.
-(8,4) and (8,8) will fold on the x axis.
-(8,8) and (12,8) will fold on the y axis.
-So as you go from 0,4 towards 4,4 and 4,7 your z remains constant
-let's say you're at 0,4,0 to 4,4,0 or 4,7,0
-but after the fold your x becomes a z
-so when you go from 4,4 to 5,4 on 2d, you go from 4,4,0 to 4,4,1 on 3d
-for any x in {4..7}  and y in {4..7} z = x - 4 and y=y
-but then we fold again at 8,4
-and your z stays constant at 4 and you
-how do we represent this?
-z = ax + by
-no
-B is on the 0,4 plane at 0,6
-D is on the 4,4 plane at 5,4
-(0,4) and (4,4) will fold on the y axis.
-the 0,4 plane is the front at z=0
-the 4,4 plane will be the right and move toward z=1
-in the 4,4 plane x=4 and z=x-4 and y=y
-D=(5,4)=(4,4,1)
-
-(4,4) and (8,4) will fold on the y axis.
-8,4 will be the backwards plane
-in the 8,4 plane z=4 and y=y and x=4-(x-8)=12-x
-A is on the 8,4 plane at 11,6
-A=(11,6)=(1,6,4)
-
-(8,4) and (8,8) will fold on the x axis.
-8,8 is below 8,4 and will be the bottom side
-so z decreases as y increases
-z=4-(y-8)=12-y
-y=8
-x=12-x same as before
-90% sure I learned how to do this with vectors in linear algebra
-
-(8,8) and (12,8) will fold on the y axis.
-12,8 is to the right as you look at the bottom
-12,8 is the left side
-
-*/
 
 fn main() {
     let test_input = "        ...#
-    .#..
-    #...
-    ....
+        .#..
+        #...
+        ....
 ...#.......#
 ........#...
 ..#....#....
@@ -619,17 +829,8 @@ fn main() {
         ......#.
 
 10R5L5R10L4R5L5";
-    println!("Part 1 test: {:?}", solve_part_1(&test_input));
+    assert_eq!(solve_part_1(&test_input), 6032);
     //    let real_input = read_to_string("data/input22.txt").unwrap();
     //    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
-    solve_part_2(&test_input);
+    assert_eq!(solve_part_2(&test_input), 5031);
 }
-// let's say the bottom of 4 is horizontal
-// it goes 0,0,0 to 3,0,0
-// bottom 4 adjoins top 5
-// left 4 adjoins right 3
-// top 4 adjoins bottom 1
-// right 4?
-// 4 goes from 0,0,0 to 3,3,0
-// when you hit the top of 4 and go up you turn 90 degrees
-// 1 goes from 0,3,0 to 0,3,3
