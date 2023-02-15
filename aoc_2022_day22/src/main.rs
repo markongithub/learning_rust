@@ -1,3 +1,7 @@
+// I AM SORRY FOR THIS
+// IT IS THE WORST THING I HAVE WRITTEN IN 20 YEARS
+// IF YOU ARE A PROSPECTIVE EMPLOYER PLEASE STOP READING NOW
+
 use std::collections::HashMap;
 use std::fs::read_to_string;
 
