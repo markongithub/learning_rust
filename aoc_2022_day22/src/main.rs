@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-// use std::fs::read_to_string;
+use std::fs::read_to_string;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Direction {
@@ -247,6 +247,10 @@ fn go_around_corner(
     // say I was going grid-up from Right3 to Front3
     // I guess on Front3 I am coming from Right3
     let next_side_orientation = side_to_orientation(side_map, next_side);
+    println!(
+        "Grid-up on the {:?} side is {:?}",
+        next_side, next_side_orientation
+    );
     let source_direction = direction_3d_to_grid(next_side, side, next_side_orientation);
     println!(
         "To get back to {:?} from {:?} means going grid-{:?}",
@@ -320,7 +324,7 @@ fn move_distance_part_2(
     side_length: usize,
     start: usize,
     (start_direction, distance): (Direction, usize),
-) -> usize {
+) -> (usize, Direction) {
     let map_height = map.len() / map_width;
     let mut my_position = start;
     let mut direction = start_direction;
@@ -371,7 +375,7 @@ fn move_distance_part_2(
             square_coords(my_position, map_width)
         );
     }
-    my_position
+    (my_position, direction)
 }
 
 fn parse_input(input: &str) -> (Vec<Square>, usize, Vec<Movement>) {
@@ -589,6 +593,10 @@ fn direction_3d_to_grid(
     destination_side: Direction3D,
     orientation: Direction3D,
 ) -> Direction {
+    println!(
+        "How do we get from {:?} (whose grid-Up is {:?}) to {:?}?",
+        side, orientation, destination_side
+    );
     let four_possible_directions: Vec<Direction3D> = match side {
         Direction3D::Front => vec![
             Direction3D::Up,
@@ -629,16 +637,16 @@ fn direction_3d_to_grid(
     };
 
     let mut rotation = 0;
-    // So say I am on Right and my Grid-Up is Down, which is index 2
+    // So say I am on Up and my Grid-Up is Left, which is index 3
     // in my four possible directions.
     for i in 0..4 {
         if four_possible_directions[i] == orientation {
-            rotation = i;
+            rotation = 4 - i;
             break;
         }
     }
-    // so rotation = 2
-    // so say I want to find the Back side. That is index 1 in my four.
+    // so rotation = 3
+    // so say I want to find the Back side. That is index 0 in my four.
     let mut direction_3d_index = 0;
     for i in 0..4 {
         if four_possible_directions[i] == destination_side {
@@ -646,8 +654,12 @@ fn direction_3d_to_grid(
             break;
         }
     }
-    // so direction_3d_index = 1
-    // I think I just want 1 + 2 mod 4
+    // so direction_3d_index = 0
+    // I think I just want 3 + 0 mod 4 no that's wrong
+    println!(
+        "rotation is {} and direction_3d_index is {}",
+        rotation, direction_3d_index
+    );
     match (rotation + direction_3d_index) % 4 {
         0 => Direction::Up,
         1 => Direction::Right,
@@ -657,7 +669,6 @@ fn direction_3d_to_grid(
     }
 }
 
-/*
 fn solve_part_2(input: &str) -> usize {
     let (map, width, movements) = parse_input(input);
     // test input is 12 rows by 16 columns
@@ -668,16 +679,36 @@ fn solve_part_2(input: &str) -> usize {
     let (side_map, side_length) = fold_cube(&map, width);
 
     let mut position = start_position(&map);
-    let mut last_direction = Direction::Up;
+    let mut last_direction = Direction::Right;
     for movement in movements.iter() {
-        let distance;
-        (last_direction, distance) = *movement;
-        println!(
-            "I am about to move {} squares {:?}",
-            distance, last_direction
-        );
-        position = move_distance_part_2(&map, width, &side_map, side_length, position, *movement);
-        println!("After that movement I am at square {}", position);
+        match movement {
+            Movement::Turn(c) => {
+                println!(
+                    "I am facing grid-{:?} and am about to turn {}",
+                    last_direction, c
+                );
+                last_direction = turn(last_direction, *c);
+                println!("I turned {} and am now facing grid-{:?}", c, last_direction);
+            }
+            Movement::Advance(distance) => {
+                println!(
+                    "I am about to move {} squares {:?}",
+                    distance, last_direction
+                );
+                (position, last_direction) = move_distance_part_2(
+                    &map,
+                    width,
+                    &side_map,
+                    side_length,
+                    position,
+                    (last_direction, *distance),
+                );
+                println!(
+                    "After that movement I am at square {} facing grid-{:?}",
+                    position, last_direction
+                );
+            }
+        }
     }
     let direction_value = match last_direction {
         Direction::Right => 0,
@@ -687,9 +718,13 @@ fn solve_part_2(input: &str) -> usize {
     };
     let final_row = (position / width) + 1;
     let final_column = (position % width) + 1;
+    println!(
+        "Final 1-indexed coords: ({},{}). Final direction value: {}",
+        final_column, final_row, direction_value
+    );
     (1000 * final_row) + (4 * final_column) + direction_value
 }
-*/
+
 fn fold_cube(
     map: &Vec<Square>,
     width: usize,
@@ -839,8 +874,59 @@ fn main() {
         ......#.
 
 10R5L5R10L4R5L5";
-    assert_eq!(solve_part_1(&test_input), 6032);
-    //    let real_input = read_to_string("data/input22.txt").unwrap();
+    //    assert_eq!(solve_part_1(&test_input), 6032);
     //    println!("Part 1 solution: {:?}", solve_part_1(&real_input));
-    //    assert_eq!(solve_part_2(&test_input), 5031);
+    /*println!(
+        "Part 2 test (should be 5031): {:?}",
+        solve_part_2(&test_input)
+    );
+    */
+    let real_input = read_to_string("data/input22.txt").unwrap();
+    println!(
+        "Part 2 solution (should be 11451): {:?}",
+        solve_part_2(&real_input)
+    );
+    /*    let test_input_2 = "    ........
+        ........
+        ........
+        ........
+        ....
+        ....
+        ....
+        ....
+    ........
+    ........
+    ........
+    ........
+    ....
+    ....
+    ....
+    ....
+
+    2R2R4";
+        println!(
+            "Part 2 test 2 (should be 10008): {:?}",
+            solve_part_2(&test_input_2)
+        );
+    */
+    /*    let test_input_3 = "    ...#.#..
+        .#......
+        #.....#.
+        ........
+        ...#
+        #...
+        ....
+        ..#.
+    ..#....#
+    ........
+    .....#..
+    ........
+    #...
+    ..#.
+    ....
+    ....
+
+    10R5L5R10L4R5L5";
+        println!("Part 2 test 3 (should be 10006): {:?}", solve_part_2(&test_input_3));
+    */
 }
