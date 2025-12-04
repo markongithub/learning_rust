@@ -70,6 +70,50 @@ fn solve_part_1(input: &str) -> usize {
     accessible
 }
 
+fn solve_part_2(input: &str) -> usize {
+    let mut grid = parse_input(input);
+    let mut count_grid = neighbor_counts(&grid);
+    let num_rows = grid.len();
+    let num_columns = grid[0].len();
+    let mut total_removed = 0;
+    loop {
+        let mut to_remove = vec![];
+        let mut y = 0;
+        for row in count_grid.iter() {
+            let mut x = 0;
+            for column in row.iter() {
+                if *column < 4 && grid[y][x] {
+                    // println!("I can remove the roll at {},{}", y, x);
+                    to_remove.push((y, x))
+                }
+                x += 1;
+            }
+            y += 1;
+        }
+        if to_remove.is_empty() {
+            break;
+        }
+        for &(remove_y, remove_x) in to_remove.iter() {
+            grid[remove_y][remove_x] = false;
+            let min_y = if remove_y == 0 { 0 } else { remove_y - 1 };
+            let min_x = if remove_x == 0 { 0 } else { remove_x - 1 };
+            for neighbor_y in min_y..(min(num_rows, remove_y + 2)) {
+                for neighbor_x in min_x..min(num_columns, remove_x + 2) {
+                    if (remove_x, remove_y) != (neighbor_x, neighbor_y) {
+                        /*                    println!(
+                            "Since {},{} is true I am going to increment {},{} from {}",
+                            y, x, neighbor_y, neighbor_x, neighbor_coords[y][x]
+                        ); */
+                        count_grid[neighbor_y][neighbor_x] -= 1;
+                    }
+                }
+            }
+            total_removed += 1;
+        }
+    }
+    total_removed
+}
+
 fn main() {
     println!("whatever: {:?}", parse_row("..@@.@@@@."));
     println!("whatever: {:?}", parse_input("..@@.@@@@."));
@@ -90,4 +134,6 @@ fn main() {
     println!("should be 13: {}", solve_part_1(test_input));
     let real_input = read_to_string("data/input_2025_04.txt").unwrap();
     println!("part 1 answer: {}", solve_part_1(&real_input));
+    println!("should eventually be 43: {}", solve_part_2(test_input));
+    println!("part 2 answer: {}", solve_part_2(&real_input));
 }
