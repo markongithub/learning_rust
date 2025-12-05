@@ -1,30 +1,30 @@
 use std::fs::read_to_string;
 
 fn best_two_digits(digits: &str) -> u32 {
-    let mut first: u32 = 0;
-    let mut second: u32 = 0;
-    for digit_char in digits.chars().rev() {
-        let digit = digit_char.to_digit(10).unwrap();
-        if second == 0 {
-            second = digit;
-            continue;
-        }
-        if digit > first {
-            if first > second {
-                second = first;
-            }
-            first = digit;
-        } else if digit == first && digit > second {
-            second = digit;
-        }
-    }
-    let answer = (first * 10) + second;
-    // println!("{} -> {}", digits, answer);
-    answer
+    best_n_digits(digits, 2)
 }
 
 fn solve_part_1(input: &str) -> u32 {
     input.lines().map(best_two_digits).sum()
+}
+
+fn best_n_digits(digits: &str, batteries: usize) -> u32 {
+    if digits.len() < batteries {
+        panic!("The string can't be shorter than the number of batteries.");
+    }
+    let mut interim = vec![0];
+    for digit_char in digits.chars().rev() {
+        let digit = digit_char.to_digit(10).unwrap();
+        if digit >= *interim.last().unwrap() {
+            interim.push(digit);
+        }
+    }
+    println!("My answer vector is {:?}", interim);
+    let mut accu = 0;
+    for _ in 0..batteries {
+        accu = (10 * accu) + interim.pop().unwrap();
+    }
+    accu
 }
 
 fn main() {
