@@ -100,10 +100,6 @@ fn solve_part_2(input: &str) -> usize {
             for neighbor_y in min_y..(min(num_rows, remove_y + 2)) {
                 for neighbor_x in min_x..min(num_columns, remove_x + 2) {
                     if (remove_x, remove_y) != (neighbor_x, neighbor_y) {
-                        /*                    println!(
-                            "Since {},{} is true I am going to increment {},{} from {}",
-                            y, x, neighbor_y, neighbor_x, neighbor_coords[y][x]
-                        ); */
                         count_grid[neighbor_y][neighbor_x] -= 1;
                     }
                 }
